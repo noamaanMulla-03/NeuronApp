@@ -1,4 +1,4 @@
-package com.neuronapp
+package com.neuron
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

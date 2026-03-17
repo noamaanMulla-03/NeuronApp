@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "793784621156",
+    "project_id": "neuron-bb594",
+    "storage_bucket": "neuron-bb594.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793784621156:android:d7567b0f23aec2093f2771",
+        "android_client_info": {
+          "package_name": "com.neuron"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "793784621156-jpa4tc7g68ap6hdmspi442m9102p46hs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZxaWhV4ODJ1DbZjMuJmtqtKCLATUdH7E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "793784621156-jpa4tc7g68ap6hdmspi442m9102p46hs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
