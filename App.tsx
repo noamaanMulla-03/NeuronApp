@@ -13,23 +13,27 @@ import {
 } from './src/lib/biometric';
 
 import LoginScreen from './app/auth/login';
-import RegisterScreen from './app/auth/register';
-import ForgotPasswordScreen from './app/auth/forgot-password';
 import HomeScreen from './app/home/index';
+import ProfileScreen from './app/home/profile';
+import GSuiteConnectScreen from './app/home/gsuite-connect';
+import GSuiteStatusScreen from './app/home/gsuite-status';
+import GSuiteDataScreen from './app/home/gsuite-data';
 
 const Stack = createNativeStackNavigator();
 
 const AuthStack = () => (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
     </Stack.Navigator>
 );
 
 const AppStack = () => (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="GSuiteConnect" component={GSuiteConnectScreen} />
+        <Stack.Screen name="GSuiteStatus" component={GSuiteStatusScreen} />
+        <Stack.Screen name="GSuiteData" component={GSuiteDataScreen} />
     </Stack.Navigator>
 );
 
@@ -47,14 +51,24 @@ function AppNavigator() {
             webClientId:
                 '793784621156-jpa4tc7g68ap6hdmspi442m9102p46hs.apps.googleusercontent.com',
             offlineAccess: true,
+            scopes: [
+                'https://www.googleapis.com/auth/gmail.readonly',
+                'https://www.googleapis.com/auth/drive.readonly',
+                'https://www.googleapis.com/auth/calendar.readonly',
+                'https://www.googleapis.com/auth/contacts.readonly',
+                'https://www.googleapis.com/auth/tasks.readonly',
+                'https://www.googleapis.com/auth/documents.readonly',
+                'https://www.googleapis.com/auth/spreadsheets.readonly',
+                'https://www.googleapis.com/auth/presentations.readonly',
+            ],
         });
     }, []);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
-            setUser(user);
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: User | null) => {
+            setUser(firebaseUser);
 
-            if (user) {
+            if (firebaseUser) {
                 const enabled = await isBiometricEnabled();
                 setBiometricEnabled(enabled);
 
@@ -91,7 +105,7 @@ function AppNavigator() {
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [setUser]);
 
     if (loading || authLoading) {
         return (

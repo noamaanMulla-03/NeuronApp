@@ -7,6 +7,7 @@ import {
     ViewStyle,
     TextStyle,
 } from 'react-native';
+import { theme } from '../theme';
 
 interface ButtonProps {
     title: string;
@@ -46,8 +47,10 @@ export const Button: React.FC<ButtonProps> = ({
                 return styles.outlineText;
             case 'google':
                 return styles.googleText;
+            case 'secondary':
+                return styles.secondaryText;
             default:
-                return styles.buttonText;
+                return styles.primaryText;
         }
     };
 
@@ -65,7 +68,7 @@ export const Button: React.FC<ButtonProps> = ({
         >
             {loading ? (
                 <ActivityIndicator
-                    color={variant === 'outline' || variant === 'google' ? '#333' : '#fff'}
+                    color={variant === 'outline' || variant === 'google' ? theme.colors.primary : theme.colors.onPrimary}
                     size="small"
                 />
             ) : (
@@ -79,43 +82,53 @@ const styles = StyleSheet.create({
     button: {
         paddingVertical: 14,
         paddingHorizontal: 24,
-        borderRadius: 12,
+        borderRadius: theme.roundness.lg,
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: 50,
+        minHeight: 52,
     },
     primaryButton: {
-        backgroundColor: '#007AFF',
+        backgroundColor: theme.colors.primary,
+        // No border for primary
     },
     secondaryButton: {
-        backgroundColor: '#5856D6',
+        backgroundColor: theme.colors.surfaceContainerHigh,
     },
     outlineButton: {
         backgroundColor: 'transparent',
         borderWidth: 1,
-        borderColor: '#007AFF',
+        borderColor: theme.colors.outlineVariant,
     },
     googleButton: {
-        backgroundColor: '#fff',
+        backgroundColor: theme.colors.surfaceContainerLowest,
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: theme.colors.outlineVariant,
     },
     disabled: {
         opacity: 0.6,
     },
-    buttonText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '600',
+    primaryText: {
+        color: theme.colors.onPrimary,
+        fontSize: 15,
+        fontWeight: '700',
+        fontFamily: theme.typography.fonts.body,
+    },
+    secondaryText: {
+        color: theme.colors.primary,
+        fontSize: 15,
+        fontWeight: '700',
+        fontFamily: theme.typography.fonts.body,
     },
     outlineText: {
-        color: '#007AFF',
-        fontSize: 16,
+        color: theme.colors.onSurfaceVariant,
+        fontSize: 15,
         fontWeight: '600',
+        fontFamily: theme.typography.fonts.body,
     },
     googleText: {
-        color: '#333',
-        fontSize: 16,
-        fontWeight: '500',
+        color: theme.colors.onSurface,
+        fontSize: 15,
+        fontWeight: '600',
+        fontFamily: theme.typography.fonts.body,
     },
 });

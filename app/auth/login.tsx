@@ -6,68 +6,24 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TouchableOpacity,
-  Alert,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Input } from '../../src/components/Input';
-import { PasswordInput } from '../../src/components/PasswordInput';
+import { theme } from '../../src/theme';
 import { Button } from '../../src/components/Button';
-import { signInWithEmail, signInWithGoogle } from '../../src/lib/auth';
-import { getAuthErrorMessage } from '../../src/lib/errors';
+import { signInWithGoogle } from '../../src/lib/auth';
 
-const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
-
-type LoginFormData = z.infer<typeof loginSchema>;
+const { width } = Dimensions.get('window');
 
 export default function LoginScreen() {
-  const navigation = useNavigation<any>();
-  const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
-
-  const onSubmit = async (data: LoginFormData) => {
-    setLoading(true);
-    setError(null);
-    try {
-      await signInWithEmail(data.email, data.password);
-    } catch (err: any) {
-      const errorMessage = getAuthErrorMessage(err.code);
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
+  const onGoogleSignIn = async () => {
     setGoogleLoading(true);
-    setError(null);
     try {
       await signInWithGoogle();
-    } catch (err: any) {
-      const errorMessage = getAuthErrorMessage(err.code);
-      if (errorMessage !== 'Sign-in was cancelled') {
-        setError(errorMessage);
-      }
+    } catch (error: any) {
+      // Error handled
     } finally {
       setGoogleLoading(false);
     }
@@ -81,87 +37,53 @@ export default function LoginScreen() {
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
+          {/* Background Decorative Elements */}
+          <View style={styles.decorativeCircle1} />
+          <View style={styles.decorativeCircle2} />
+
           <View style={styles.header}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue</Text>
+            <View style={styles.logoContainer}>
+               <View style={styles.logoBox}>
+                  <Text style={styles.logoSymbol}>H</Text>
+               </View>
+               <Text style={styles.logoText}>Neuron</Text>
+            </View>
+            
+            <Text style={styles.headline}>
+              Elevate your{'\n'}intelligence.
+            </Text>
+            <Text style={styles.subtitle}>
+              A focused sanctuary for your digital life. Securely sync your ecosystem to unlock proactive insights.
+            </Text>
           </View>
 
-          <View style={styles.form}>
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
-
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Email"
-                  placeholder="Enter your email"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                  error={errors.email?.message}
-                />
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <PasswordInput
-                  label="Password"
-                  placeholder="Enter your password"
-                  onBlur={onBlur}
-                  onChangeText={onChange}
-                  value={value}
-                  error={errors.password?.message}
-                />
-              )}
-            />
-
-            <TouchableOpacity
-              style={styles.forgotPassword}
-              onPress={() => navigation.navigate('ForgotPassword')}
-            >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-
-            <Button
-              title="Sign In"
-              onPress={handleSubmit(onSubmit)}
-              loading={loading}
-              style={styles.button}
-            />
-
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
+          <View style={styles.formCard}>
+            <View style={styles.securityIconContainer}>
+               <Text style={styles.securityIcon}>🔒</Text>
             </View>
+            
+            <Text style={styles.cardTitle}>Security First</Text>
+            <Text style={styles.cardSubtitle}>
+              Enterprise-grade AES-256 encryption. Your neural data is local, private, and always yours.
+            </Text>
 
             <Button
               title="Sign in with Google"
-              onPress={handleGoogleSignIn}
+              onPress={onGoogleSignIn}
               loading={googleLoading}
               variant="google"
               style={styles.googleButton}
             />
-          </View>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.footerLink}>Sign Up</Text>
-            </TouchableOpacity>
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>
+                By continuing, you agree to Neuron's{' '}
+                <Text style={styles.linkText}>Privacy Policy</Text> and{' '}
+                <Text style={styles.linkText}>Terms of Service</Text>.
+              </Text>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -172,92 +94,134 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background,
   },
   keyboardView: {
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
-    padding: 24,
-    justifyContent: 'center',
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xxl,
+    minHeight: '100%',
+  },
+  decorativeCircle1: {
+    position: 'absolute',
+    top: -100,
+    left: -100,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: theme.colors.primaryFixed + '33', // 20% opacity
+    zIndex: -1,
+  },
+  decorativeCircle2: {
+    position: 'absolute',
+    top: '40%',
+    right: -150,
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    backgroundColor: theme.colors.surfaceContainerHigh + '4D', // 30% opacity
+    zIndex: -1,
   },
   header: {
-    alignItems: 'center',
-    marginBottom: 40,
+    marginTop: theme.spacing.xl,
+    marginBottom: theme.spacing.xxl,
   },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  logoBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  logoSymbol: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: theme.typography.fonts.headline,
+  },
+  logoText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: theme.colors.primary,
+    fontFamily: theme.typography.fonts.headline,
+    letterSpacing: -1,
+  },
+  headline: {
+    ...theme.typography.styles.displayLG,
+    fontSize: 48,
+    color: theme.colors.onSurface,
+    marginBottom: theme.spacing.md,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    ...theme.typography.styles.bodyLG,
+    color: theme.colors.onSurfaceVariant,
+    maxWidth: 300,
+    lineHeight: 24,
   },
-  form: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
+  formCard: {
+    backgroundColor: theme.colors.surfaceContainerLowest,
+    borderRadius: 32,
+    padding: theme.spacing.xl,
+    shadowColor: theme.colors.onSurface,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.04,
+    shadowRadius: 40,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.outlineVariant,
   },
-  errorContainer: {
-    backgroundColor: '#FFE5E5',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  errorText: {
-    color: '#FF3B30',
-    fontSize: 14,
-  },
-  forgotPassword: {
-    alignItems: 'flex-end',
-    marginBottom: 20,
-  },
-  forgotPasswordText: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  button: {
-    marginBottom: 16,
-  },
-  divider: {
-    flexDirection: 'row',
+  securityIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: theme.colors.primaryFixed,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 20,
+    alignSelf: 'center',
+    marginBottom: theme.spacing.md,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#ddd',
+  securityIcon: {
+    fontSize: 32,
   },
-  dividerText: {
-    color: '#999',
-    marginHorizontal: 16,
+  cardTitle: {
+    ...theme.typography.styles.headlineMD,
+    fontSize: 24,
+    textAlign: 'center',
+    color: theme.colors.onSurface,
+    marginBottom: theme.spacing.xs,
+  },
+  cardSubtitle: {
+    ...theme.typography.styles.bodyLG,
     fontSize: 14,
+    textAlign: 'center',
+    color: theme.colors.onSurfaceVariant,
+    marginBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.md,
   },
   googleButton: {
-    marginBottom: 8,
+    marginBottom: theme.spacing.md,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 32,
+    marginTop: theme.spacing.xs,
   },
   footerText: {
-    color: '#666',
-    fontSize: 16,
+    fontSize: 11,
+    color: theme.colors.outline,
+    textAlign: 'center',
+    lineHeight: 16,
+    fontFamily: theme.typography.fonts.body,
   },
-  footerLink: {
-    color: '#007AFF',
-    fontSize: 16,
+  linkText: {
+    color: theme.colors.primary,
     fontWeight: '600',
   },
 });

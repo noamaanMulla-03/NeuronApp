@@ -8,6 +8,7 @@ import {
   TextInputProps,
   ViewStyle,
 } from 'react-native';
+import { theme } from '../theme';
 
 interface PasswordInputProps extends Omit<TextInputProps, 'secureTextEntry'> {
   label?: string;
@@ -21,9 +22,22 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   error,
   containerStyle,
   showStrengthIndicator = false,
+  onFocus,
+  onBlur,
   ...props
 }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const handleFocus = (e: any) => {
+    setIsFocused(true);
+    if (onFocus) onFocus(e);
+  };
+
+  const handleBlur = (e: any) => {
+    setIsFocused(false);
+    if (onBlur) onBlur(e);
+  };
 
   const getPasswordStrength = (password: string): number => {
     if (!password) return 0;
@@ -37,10 +51,10 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   };
 
   const getStrengthColor = (strength: number): string => {
-    if (strength <= 1) return '#FF3B30';
+    if (strength <= 1) return theme.colors.error;
     if (strength <= 2) return '#FF9500';
     if (strength <= 3) return '#34C759';
-    return '#007AFF';
+    return theme.colors.primary;
   };
 
   const strength = getPasswordStrength(props.value || '');
@@ -48,11 +62,17 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
   return (
     <View style={[styles.container, containerStyle]}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.inputContainer, error && styles.inputError]}>
+      <View style={[
+          styles.inputContainer, 
+          isFocused && styles.inputFocused,
+          error && styles.inputError
+      ]}>
         <TextInput
           style={styles.input}
           secureTextEntry={!showPassword}
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.colors.onSurfaceVariant + '80'}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           {...props}
         />
         <TouchableOpacity
@@ -92,45 +112,50 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 8,
+    ...theme.typography.styles.labelMD,
+    color: theme.colors.onSurfaceVariant,
+    marginBottom: theme.spacing.sm,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: theme.colors.surfaceContainerLowest,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 12,
+    borderColor: theme.colors.outlineVariant,
+    borderRadius: theme.roundness.lg,
+  },
+  inputFocused: {
+    borderColor: theme.colors.primary,
   },
   inputError: {
-    borderColor: '#FF3B30',
+    borderColor: theme.colors.error,
   },
   input: {
     flex: 1,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#333',
+    color: theme.colors.onSurface,
+    fontFamily: theme.typography.fonts.body,
   },
   toggleButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   toggleText: {
-    color: '#007AFF',
+    color: theme.colors.primary,
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
+    fontFamily: theme.typography.fonts.body,
   },
   error: {
-    color: '#FF3B30',
+    color: theme.colors.error,
     fontSize: 12,
     marginTop: 4,
+    fontFamily: theme.typography.fonts.body,
   },
   strengthContainer: {
     flexDirection: 'row',
@@ -140,7 +165,7 @@ const styles = StyleSheet.create({
   strengthBar: {
     flex: 1,
     height: 4,
-    backgroundColor: '#eee',
+    backgroundColor: theme.colors.surfaceContainerHigh,
     borderRadius: 2,
     marginRight: 8,
   },
@@ -150,6 +175,7 @@ const styles = StyleSheet.create({
   },
   strengthText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '700',
+    fontFamily: theme.typography.fonts.body,
   },
 });
