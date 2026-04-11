@@ -109,3 +109,7 @@ export const syncService = onCall<SyncRequestData>(async request => {
     );
   }
 });
+
+// AI & Semantic Memory Features
+export * from './services/vector-sync';
+export * from './services/chat-retrieval';

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Neuron | Project Hubs</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#005bc0",
+                    "outline": "#727785",
+                    "primary-fixed-dim": "#adc7ff",
+                    "surface-container-lowest": "#ffffff",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-secondary": "#ffffff",
+                    "inverse-surface": "#2e3132",
+                    "on-secondary-fixed": "#001a41",
+                    "surface-variant": "#e1e3e4",
+                    "inverse-on-surface": "#f0f1f2",
+                    "secondary-container": "#b2c9fe",
+                    "tertiary-container": "#c55500",
+                    "on-tertiary-container": "#0e0200",
+                    "primary": "#005bbf",
+                    "primary-container": "#1a73e8",
+                    "on-primary-container": "#ffffff",
+                    "on-error": "#ffffff",
+                    "primary-fixed": "#d8e2ff",
+                    "surface-dim": "#d9dadb",
+                    "secondary": "#475e8c",
+                    "on-primary-fixed-variant": "#004493",
+                    "tertiary-fixed": "#ffdbcb",
+                    "on-secondary-fixed-variant": "#2e4673",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-fixed": "#341100",
+                    "on-background": "#191c1d",
+                    "inverse-primary": "#adc7ff",
+                    "on-surface-variant": "#414754",
+                    "error": "#ba1a1a",
+                    "on-surface": "#191c1d",
+                    "on-error-container": "#93000a",
+                    "tertiary-fixed-dim": "#ffb691",
+                    "secondary-fixed": "#d8e2ff",
+                    "surface-container": "#edeeef",
+                    "on-secondary-container": "#3d5481",
+                    "surface-container-low": "#f3f4f5",
+                    "surface-bright": "#f8f9fa",
+                    "on-tertiary": "#ffffff",
+                    "on-primary-fixed": "#001a41",
+                    "outline-variant": "#c1c6d6",
+                    "on-tertiary-fixed-variant": "#783100",
+                    "background": "#f8f9fa",
+                    "tertiary": "#9e4300",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed-dim": "#afc7fb",
+                    "surface": "#f8f9fa",
+                    "surface-container-high": "#e7e8e9"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        h1, h2, h3 { font-family: 'Manrope', sans-serif; }
+        .glass-card {
+            background: rgba(225, 227, 228, 0.7);
+            backdrop-filter: blur(24px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-6 py-4 bg-slate-50/70 dark:bg-slate-950/70 backdrop-blur-xl">
+<div class="flex items-center gap-3">
+<div class="relative">
+<img alt="User Profile" class="w-10 h-10 rounded-full object-cover" data-alt="professional headshot of a creative director in a minimalist studio setting with soft natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAM2Tz6WCfmqzTxHyhir_u0xA4dIPwIxs0vcQJZWg8WljzW_6e4-9_CfDZwIQ94yd0K_ubFknaB-I1JQ4Lh-N1LPYQqRTkmOAHzTCnfCMTxNRRsdNAIW2pSGFwEmgLWjBj2o1YgAecsF08q9uUeaKFerI7Rw9Hj4pijGT7GIzRF_ghtK_hU12-4yso4KiVAEAWlAIROWUU5tbupBGiFD7BWsE7E-bvuFKm6jTb6vcZQxD-3vyn_Z3y3c2zQMaaWU-m3GQyDbuhOJ4"/>
+<div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-slate-50 rounded-full"></div>
+</div>
+<span class="text-xl font-bold tracking-tighter text-blue-600 dark:text-blue-400">Neuron</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-all duration-300 ease-in-out rounded-full">
+<span class="material-symbols-outlined">search</span>
+</button>
+</div>
+</header>
+<main class="pt-24 pb-32 px-6 max-w-7xl mx-auto">
+<!-- Page Title & Editorial Intro -->
+<section class="mb-12">
+<h1 class="text-display-lg font-bold tracking-tight text-on-surface mb-2">Project Hubs</h1>
+<p class="text-on-surface-variant max-w-xl font-body leading-relaxed">
+                Your architectural view of active work. "Information Glue" connects your silos into actionable knowledge.
+            </p>
+</section>
+<!-- AI Insight Banner (Asymmetric Placement) -->
+<div class="mb-12 relative group">
+<div class="absolute -inset-1 bg-gradient-to-r from-primary to-primary-container rounded-xl blur opacity-20 group-hover:opacity-30 transition duration-1000"></div>
+<div class="relative bg-surface-container-lowest p-6 rounded-xl border border-outline-variant/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+<div class="flex items-start gap-4">
+<div class="bg-primary/10 p-3 rounded-full text-primary">
+<span class="material-symbols-outlined">auto_awesome</span>
+</div>
+<div>
+<p class="text-on-surface font-medium mb-1">I noticed a new thread about Q4 Marketing. Create a Hub?</p>
+<p class="text-label-md text-on-surface-variant font-medium">DETECTED IN: GMAIL (5 THREADS), DRIVE (2 FILES)</p>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="px-6 py-2 bg-gradient-to-br from-primary to-primary-container text-white font-medium rounded-lg hover:-translate-y-0.5 transition-all duration-300 shadow-lg shadow-primary/20">
+                        Create Hub
+                    </button>
+<button class="px-6 py-2 text-primary font-medium hover:bg-primary/5 rounded-lg transition-all">
+                        Dismiss
+                    </button>
+</div>
+</div>
+</div>
+<!-- Bento Grid of Hubs -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- Hub Card: Product Launch 2026 -->
+<div class="md:col-span-8 bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/10 shadow-sm hover:shadow-xl transition-all duration-500 group">
+<div class="flex justify-between items-start mb-8">
+<div>
+<span class="text-label-md text-primary font-bold tracking-widest bg-primary/5 px-3 py-1 rounded-full">ACTIVE HUB</span>
+<h2 class="text-headline-md font-bold tracking-tight mt-3 mb-1">Product Launch 2026</h2>
+<p class="text-on-surface-variant text-sm">Strategic alignment for the next-gen neural interface release.</p>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Glue Element: Gmail -->
+<div class="space-y-4">
+<div class="flex items-center gap-2 text-on-surface font-semibold text-sm">
+<span class="material-symbols-outlined text-red-500 text-[20px]">mail</span>
+                            Gmail Threads
+                        </div>
+<ul class="space-y-3">
+<li class="p-3 bg-surface-container-low rounded-lg hover:bg-surface-container hover:translate-x-1 transition-all cursor-pointer">
+<p class="text-xs font-bold text-on-surface truncate">V3 Prototype Feedback</p>
+<p class="text-[10px] text-on-surface-variant">3 new replies · 2h ago</p>
+</li>
+<li class="p-3 bg-surface-container-low rounded-lg hover:bg-surface-container hover:translate-x-1 transition-all cursor-pointer">
+<p class="text-xs font-bold text-on-surface truncate">Legal Review: IP Clauses</p>
+<p class="text-[10px] text-on-surface-variant">Waiting on Sarah</p>
+</li>
+</ul>
+</div>
+<!-- Glue Element: Drive -->
+<div class="space-y-4">
+<div class="flex items-center gap-2 text-on-surface font-semibold text-sm">
+<span class="material-symbols-outlined text-blue-500 text-[20px]">drive_file_move</span>
+                            Drive Files
+                        </div>
+<ul class="space-y-3">
+<li class="p-3 bg-surface-container-low rounded-lg flex items-center gap-3 cursor-pointer group/file">
+<div class="w-8 h-8 rounded bg-blue-100 flex items-center justify-center text-blue-600">
+<span class="material-symbols-outlined text-lg">description</span>
+</div>
+<div class="overflow-hidden">
+<p class="text-xs font-bold text-on-surface truncate">Marketing_Plan_V2.pdf</p>
+<p class="text-[10px] text-on-surface-variant">Modified Yesterday</p>
+</div>
+</li>
+<li class="p-3 bg-surface-container-low rounded-lg flex items-center gap-3 cursor-pointer">
+<div class="w-8 h-8 rounded bg-green-100 flex items-center justify-center text-green-600">
+<span class="material-symbols-outlined text-lg">table_chart</span>
+</div>
+<div class="overflow-hidden">
+<p class="text-xs font-bold text-on-surface truncate">Budget_Q1_Final.xlsx</p>
+<p class="text-[10px] text-on-surface-variant">Shared with 4 people</p>
+</div>
+</li>
+</ul>
+</div>
+<!-- Glue Element: Calendar -->
+<div class="space-y-4">
+<div class="flex items-center gap-2 text-on-surface font-semibold text-sm">
+<span class="material-symbols-outlined text-yellow-600 text-[20px]">calendar_today</span>
+                            Upcoming
+                        </div>
+<div class="bg-gradient-to-br from-surface-container-low to-surface-container p-4 rounded-xl border-l-4 border-primary">
+<p class="text-[10px] font-bold text-primary mb-1 uppercase tracking-wider">Tomorrow, 10:00 AM</p>
+<p class="text-xs font-bold text-on-surface leading-snug">Launch Readiness Sync with Executive Board</p>
+<div class="flex -space-x-2 mt-3">
+<img alt="Team" class="w-5 h-5 rounded-full ring-2 ring-surface-container-lowest" data-alt="close-up portrait of a cheerful woman working in a sunny modern office space" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDf9eYFftYL9KJw2Hz94rAul0S6WK7kbbSxcempiRYPOYJ-7Of1M69MjuJr8smfigvsrJW05bjQY36skk-SGk2pbdGiV0LlUqfrSSklbb9JSCcyeiA8Y1mhGEkTzJD9ajBsv3aL8mIUBUSLLdrCItTsSZ3Vn9ZV3VwyeuEEc0zuiyuYeQ7N5fm2oxo9Y0R66YQyKPHhxA-X-0I4Yq55mAzPsKFqnRnLIXW9Z6qC_5cRQZadT_OdykvJOG3wC_rZeBXwieglCx5Scjw"/>
+<img alt="Team" class="w-5 h-5 rounded-full ring-2 ring-surface-container-lowest" data-alt="professional man with glasses smiling in a corporate high-rise environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDm0E8iZkOwXsiIhr6C_cEnohyI9qqMiRaZbNDWoGHvA-GOSB0pl6hiWg9FE8lU-iHtfJ6-uwPeAlU-lGvBohy2cAMwV7MkZEyoF1ucS4LMsBfr67uN-43DBiBHWfJYgIZtXLB9pbSJuXK6wmtDsnzMWU-82RsYJoD8QcGpQhreHceEPRsbeAqIbPjM3ttR-PD2lsBJmVTfqiuuLp0bp5gOKK-7bTZJi5-kqb-0b1j5peijYwJ7Chp3zeJc8ryMn9ox7XUqKYmCIzM"/>
+<div class="w-5 h-5 rounded-full bg-slate-200 text-[8px] flex items-center justify-center font-bold ring-2 ring-surface-container-lowest">+3</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Hub Card: Project X Proposal (Sidebar Asymmetry) -->
+<div class="md:col-span-4 bg-surface-container-low rounded-xl p-6 flex flex-col justify-between border border-transparent hover:border-outline-variant/20 transition-all duration-300">
+<div>
+<div class="w-12 h-12 bg-on-surface text-surface rounded-lg flex items-center justify-center mb-6">
+<span class="material-symbols-outlined">rocket_launch</span>
+</div>
+<h3 class="text-xl font-bold tracking-tight text-on-surface mb-2">Project X Proposal</h3>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-6">Internal experimental research on localized edge processing.</p>
+<div class="space-y-4">
+<div class="flex items-center justify-between text-xs text-on-surface-variant border-b border-outline-variant/10 pb-2">
+<span class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">link</span> Links</span>
+<span class="font-bold">14</span>
+</div>
+<div class="flex items-center justify-between text-xs text-on-surface-variant border-b border-outline-variant/10 pb-2">
+<span class="flex items-center gap-2"><span class="material-symbols-outlined text-sm">chat</span> Mentions</span>
+<span class="font-bold">29</span>
+</div>
+</div>
+</div>
+<div class="mt-8">
+<img alt="Project Visualization" class="w-full h-32 object-cover rounded-lg grayscale opacity-40 hover:grayscale-0 hover:opacity-100 transition-all duration-700" data-alt="high-tech computer server rack with neon blue lights in a dark data center" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhW-FKtlU-7XWSz4oohThw7NAxQrAhErwi_CRZQpcd4tOgm2S7KuZ56lC2i7r8qjAb23I50LrfpWFRpLWC9q-cCYVQtA2vAJiUJggxMQpVxbBBduJeqHPBbfXKAt43HOoZ3xI-ogPdK46JGF0PzrLTCKpNi3ePZPP6hMMQZgjGqz8noV_NXJ11_bhtpGu2aBSuRcCLLlAQAKs8aNnJK9wp0esShSfPLBznNzflyZ2P-yMbHg1THajLuYr0a8Gc99G0OfC_QRwmZqo"/>
+<button class="w-full mt-4 py-3 bg-white text-on-surface font-bold text-xs rounded-lg hover:bg-on-surface hover:text-white transition-all">
+                        ENTER WORKSPACE
+                    </button>
+</div>
+</div>
+<!-- Secondary Hubs (Smaller Cards) -->
+<div class="md:col-span-4 bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/10 shadow-sm hover:shadow-lg transition-all group">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 rounded-full bg-tertiary-container/20 text-tertiary flex items-center justify-center">
+<span class="material-symbols-outlined">palette</span>
+</div>
+<div>
+<h4 class="text-sm font-bold text-on-surface">Brand Refresh</h4>
+<p class="text-[11px] text-on-surface-variant">Update for Q3 rollout</p>
+</div>
+</div>
+<div class="h-2 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-3/4"></div>
+</div>
+<p class="text-[10px] mt-2 font-bold text-tertiary">75% Complete</p>
+</div>
+<div class="md:col-span-4 bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/10 shadow-sm hover:shadow-lg transition-all group">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined">balance</span>
+</div>
+<div>
+<h4 class="text-sm font-bold text-on-surface">Legal Audit 2025</h4>
+<p class="text-[11px] text-on-surface-variant">Annual compliance check</p>
+</div>
+</div>
+<div class="flex items-center -space-x-1">
+<div class="w-6 h-6 rounded-full bg-blue-100 border border-white flex items-center justify-center text-[10px] font-bold text-blue-700">JS</div>
+<div class="w-6 h-6 rounded-full bg-red-100 border border-white flex items-center justify-center text-[10px] font-bold text-red-700">AM</div>
+<div class="w-6 h-6 rounded-full bg-green-100 border border-white flex items-center justify-center text-[10px] font-bold text-green-700">TL</div>
+</div>
+</div>
+<div class="md:col-span-4 bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/10 shadow-sm hover:shadow-lg transition-all group">
+<div class="flex items-center gap-4 mb-4">
+<div class="w-10 h-10 rounded-full bg-secondary-container/20 text-secondary flex items-center justify-center">
+<span class="material-symbols-outlined">analytics</span>
+</div>
+<div>
+<h4 class="text-sm font-bold text-on-surface">Customer Insights</h4>
+<p class="text-[11px] text-on-surface-variant">Ongoing sentiment analysis</p>
+</div>
+</div>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-surface-container-high rounded text-[10px] font-bold text-on-surface-variant">DASHBOARD</span>
+<span class="px-2 py-0.5 bg-surface-container-high rounded text-[10px] font-bold text-on-surface-variant">LIVE</span>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-slate-50 dark:bg-slate-950 border-t border-slate-200/20 dark:border-slate-800/20 shadow-[0_-4px_20px_rgba(0,0,0,0.03)] rounded-t-2xl">
+<div class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 transition-transform scale-95 active:scale-90 cursor-pointer">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-medium text-[11px] mt-1">Chat</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-xl px-4 py-1.5 transition-transform scale-95 active:scale-90 cursor-pointer">
+<span class="material-symbols-outlined">account_tree</span>
+<span class="font-medium text-[11px] mt-1">Hubs</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 transition-transform scale-95 active:scale-90 cursor-pointer">
+<span class="material-symbols-outlined">insights</span>
+<span class="font-medium text-[11px] mt-1">Insights</span>
+</div>
+<div class="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 transition-transform scale-95 active:scale-90 cursor-pointer">
+<span class="material-symbols-outlined">history</span>
+<span class="font-medium text-[11px] mt-1">History</span>
+</div>
+</nav>
+<!-- NavigationDrawer Trigger (Hidden by default, used for structural reference) -->
+<div class="hidden lg:flex fixed left-0 top-0 h-full w-20 flex-col items-center py-10 bg-surface-container-low border-r border-outline-variant/10">
+<div class="space-y-8">
+<button class="w-12 h-12 flex items-center justify-center text-primary bg-primary/10 rounded-xl">
+<span class="material-symbols-outlined">account_tree</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest rounded-xl transition-all">
+<span class="material-symbols-outlined">sync</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest rounded-xl transition-all">
+<span class="material-symbols-outlined">security</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-highest rounded-xl transition-all">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+</div>
+</body></html>

@@ -23,6 +23,8 @@ const TAB_CONFIG: Record<ServiceName, { label: string; icon: string }> = {
     contacts: { label: 'People', icon: '👤' },
     tasks: { label: 'Tasks', icon: '✅' },
     docs: { label: 'Workspace', icon: '📄' },
+    keep: { label: 'Notes', icon: '📝' },
+    chat: { label: 'Chat', icon: '💬' },
 };
 
 interface DataItem {
@@ -162,6 +164,8 @@ function getCollectionPath(service: ServiceName): string[] {
         case 'contacts': return ['contacts_people'];
         case 'tasks': return ['tasks_items'];
         case 'docs': return ['docs_content'];
+        case 'keep': return ['keep_notes'];
+        case 'chat': return ['chat_messages'];
     }
 }
 

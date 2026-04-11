@@ -66,7 +66,7 @@ export default function HomeScreen() {
                 <View style={styles.chatAnchor}>
                     <TouchableOpacity 
                         style={styles.chatInput}
-                        onPress={() => navigation.navigate('GSuiteConnect' as never)}
+                        onPress={() => navigation.navigate('SemanticChat' as never)}
                     >
                         <Text style={styles.chatIcon}>💬</Text>
                         <Text style={styles.chatPlaceholder}>What's on your mind?</Text>

@@ -48,7 +48,7 @@ export async function syncService(
             throw new Error(`Server returned ${response.status}: ${errorText}`);
         }
 
-        const json = await response.json();
+        const json = await response.json() as any;
         
         // Firebase onCall responses are wrapped in a "result" field
         const result = json.result;

@@ -18,6 +18,7 @@ import ProfileScreen from './app/home/profile';
 import GSuiteConnectScreen from './app/home/gsuite-connect';
 import GSuiteStatusScreen from './app/home/gsuite-status';
 import GSuiteDataScreen from './app/home/gsuite-data';
+import SemanticChatScreen from './app/home/semantic-chat';
 
 const Stack = createNativeStackNavigator();
 
@@ -34,6 +35,7 @@ const AppStack = () => (
         <Stack.Screen name="GSuiteConnect" component={GSuiteConnectScreen} />
         <Stack.Screen name="GSuiteStatus" component={GSuiteStatusScreen} />
         <Stack.Screen name="GSuiteData" component={GSuiteDataScreen} />
+        <Stack.Screen name="SemanticChat" component={SemanticChatScreen} />
     </Stack.Navigator>
 );
 
