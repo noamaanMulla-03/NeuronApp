@@ -1,24 +1,11 @@
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useGSuiteStore, ServiceName, SERVICE_NAMES } from '../store/gsuiteStore';
-import { syncGmail } from './gmail';
-import { syncDrive } from './drive';
-import { syncCalendar } from './calendar';
-import { syncContacts } from './contacts';
-import { syncTasks } from './tasks';
-import { syncDocs } from './docs';
-
-type SyncFunction = (uid: string) => Promise<number>;
-
-const SERVICE_SYNC_MAP: Record<ServiceName, SyncFunction> = {
-    gmail: syncGmail,
-    drive: syncDrive,
-    calendar: syncCalendar,
-    contacts: syncContacts,
-    tasks: syncTasks,
-    docs: syncDocs,
-};
+import { getAccessToken } from '../lib/google-api';
 
 /**
- * Sync a single service. Updates store status in real-time.
+ * Sync a single service remotely via Firebase Cloud Functions.
+ * This prevents OOM errors on the mobile device by offloading the 
+ * heavy data processing to the server.
  */
 export async function syncService(
     uid: string,
@@ -28,11 +15,23 @@ export async function syncService(
     store.setSyncStatus(service, 'syncing');
 
     try {
-        const syncFn = SERVICE_SYNC_MAP[service];
-        const itemCount = await syncFn(uid);
+        // 1. Get a fresh access token for the Cloud Function to use
+        const accessToken = await getAccessToken();
+
+        // 2. Call the remote sync function
+        const functions = getFunctions();
+        const remoteSync = httpsCallable<{ service: string; accessToken: string }, { itemCount: number }>(
+            functions, 
+            'syncService'
+        );
+        
+        const response = await remoteSync({ service, accessToken });
+        const itemCount = response.data.itemCount;
+
         store.markSyncDone(service, itemCount);
         return { service, itemCount };
     } catch (error: any) {
+        console.error(`Cloud Sync failed for ${service}:`, error);
         const message = error?.message ?? 'Unknown error';
         store.setSyncStatus(service, 'error', message);
         return { service, itemCount: 0, error: message };
@@ -40,10 +39,10 @@ export async function syncService(
 }
 
 /**
- * Run sync for all enabled services. Services run in parallel with
- * error isolation — one service failing doesn't block others.
- *
- * Docs sync runs after Drive completes (needs file list).
+ * Run sync for all enabled services sequentially. 
+ * Serial execution prevents Out-Of-Memory (OOM) errors on Android by 
+ * ensuring only one service's network and processing logic is active at a time.
+ * Error isolation is maintained — one service failing doesn't block others.
  */
 export async function runFullSync(uid: string): Promise<{
     results: { service: ServiceName; itemCount: number; error?: string }[];
@@ -56,19 +55,13 @@ export async function runFullSync(uid: string): Promise<{
         return { results: [], totalItems: 0 };
     }
 
-    // Docs depends on Drive — separate them
-    const independent = enabledServices.filter(s => s !== 'docs');
-    const hasDocs = enabledServices.includes('docs');
+    // Docs depends on Drive — we process Drive first
+    // By processing everything sequentially, we naturally satisfy the Drive -> Docs dependency
+    const results: { service: ServiceName; itemCount: number; error?: string }[] = [];
 
-    // Run independent services in parallel
-    const results = await Promise.all(
-        independent.map(service => syncService(uid, service)),
-    );
-
-    // Run docs after drive (if both enabled)
-    if (hasDocs) {
-        const docsResult = await syncService(uid, 'docs');
-        results.push(docsResult);
+    for (const service of enabledServices) {
+        const result = await syncService(uid, service);
+        results.push(result);
     }
 
     const totalItems = results.reduce((sum, r) => sum + r.itemCount, 0);

@@ -82,6 +82,7 @@ async function delay(ms: number): Promise<void> {
 
 interface GoogleFetchOptions extends Omit<RequestInit, 'headers'> {
     headers?: Record<string, string>;
+    responseType?: 'json' | 'text';
 }
 
 export async function googleFetch<T = any>(
@@ -90,7 +91,7 @@ export async function googleFetch<T = any>(
     retryCount = 0,
 ): Promise<T> {
     const token = await getAccessToken();
-    const { headers = {}, ...rest } = options;
+    const { headers = {}, responseType = 'json', ...rest } = options;
 
     const response = await fetch(url, {
         ...rest,
@@ -122,6 +123,10 @@ export async function googleFetch<T = any>(
         throw new Error(
             `Google API error ${response.status}: ${errorBody}`,
         );
+    }
+
+    if (responseType === 'text') {
+        return (await response.text()) as any;
     }
 
     return response.json() as Promise<T>;
