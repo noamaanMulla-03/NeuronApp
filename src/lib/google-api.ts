@@ -12,11 +12,12 @@ const BASE_URLS: Record<string, string> = {
 };
 
 // --- Token cache ---
-// Google access tokens are valid for ~1 hour. We refresh 5 minutes early.
+// Google access tokens are valid for ~1 hour. We keep a short cache (4 min)
+// purely to coalesce rapid-fire calls within the same UI gesture.
 // RNGoogleSignin's native Android bridge does NOT support concurrent promise
 // invocations — calling getTokens() or signInSilently() from multiple JS
 // callsites simultaneously causes "cannot resolve promise because it's null".
-// We prevent this by (a) caching the token and (b) funnelling all token
+// We prevent this by (a) short-lived caching and (b) funnelling all token
 // fetches through a single in-flight promise at a time.
 
 let cachedToken: string | null = null;
@@ -31,7 +32,7 @@ function invalidateTokenCache(): void {
 }
 
 export async function getAccessToken(): Promise<string> {
-    // Serve from cache while token is still fresh
+    // Serve from cache only within the short coalesce window
     if (cachedToken && Date.now() < tokenExpiry) {
         return cachedToken;
     }
@@ -44,8 +45,10 @@ export async function getAccessToken(): Promise<string> {
     tokenInflight = GoogleSignin.getTokens()
         .then(tokens => {
             cachedToken = tokens.accessToken;
-            // Buffer 5 min before actual expiry
-            tokenExpiry = Date.now() + 55 * 60 * 1000;
+            // Short 4-minute cache — just enough to coalesce concurrent calls.
+            // getTokens() returns whatever the native SDK has cached, so we
+            // cannot assume it has a full hour of life remaining.
+            tokenExpiry = Date.now() + 4 * 60 * 1000;
             tokenInflight = null;
             return tokens.accessToken;
         })
@@ -57,7 +60,9 @@ export async function getAccessToken(): Promise<string> {
     return tokenInflight;
 }
 
-async function refreshAccessToken(): Promise<string> {
+// Force a fresh token via signInSilently() + getTokens(). Exported so
+// callers like the sync engine can guarantee a non-stale token.
+export async function refreshAccessToken(): Promise<string> {
     // Prevent concurrent refresh calls — they all share one signInSilently()
     if (refreshInflight) {
         return refreshInflight;

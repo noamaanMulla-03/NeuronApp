@@ -3,12 +3,8 @@ import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
 import { getFunctions } from 'firebase-admin/functions';
 import * as logger from 'firebase-functions/logger';
-import { genkit } from 'genkit';
-import { vertexAI } from '@genkit-ai/google-genai';
-
-const ai = genkit({
-  plugins: [vertexAI({ location: 'us-central1', projectId: 'neuron-bb594' })],
-});
+// Only ai and embedder needed — Firestore writes use admin.firestore() directly
+import { ai, embedder } from '../lib/genkit';
 
 interface EmbedTaskPayload {
   docPath: string;
@@ -33,7 +29,7 @@ export const processEmbedding = onTaskDispatched<EmbedTaskPayload>(
     try {
       logger.info(`Generating embedding for ${docPath}`);
       const embeddings = await ai.embed({
-        embedder: vertexAI.embedder('text-embedding-004'),
+        embedder,
         content: text,
       });
 
@@ -54,15 +50,12 @@ export const processEmbedding = onTaskDispatched<EmbedTaskPayload>(
 
 // Helper to enqueue task
 async function enqueueEmbeddingTask(docPath: string, text: string) {
-  // Use the default location 'us-central1' if not specified otherwise
   const queue = getFunctions().taskQueue('processEmbedding');
   await queue.enqueue({ docPath, text });
 }
 
 function extractTextForEmbedding(data: any): string | null {
   if (!data) return null;
-
-  // Compile a string of the most relevant text based on the document structure
   const parts = [];
 
   // Gmail
@@ -81,11 +74,7 @@ function extractTextForEmbedding(data: any): string | null {
   if (data.notes) parts.push(data.notes);
 
   if (parts.length === 0) return null;
-
   const combined = parts.join('\n\n');
-
-  // Chunking/capping to avoid massive payloads. text-embedding-004 supports 2048 tokens (~8k chars)
-  // But let's pass a decent chunk. Genkit chunking can be added later if needed.
   return combined.length > 8000 ? combined.slice(0, 8000) : combined;
 }
 

@@ -3,8 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Activi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../src/theme';
 import { useNavigation } from '@react-navigation/native';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { app } from '../../src/lib/firebase';
+import { useAuthStore } from '../../src/store/authStore';
 
 interface ChatMessage {
     id: string;
@@ -13,14 +12,50 @@ interface ChatMessage {
     sources?: string[];
 }
 
+// Cloud Function URL — matches the sync engine's raw-fetch approach to avoid
+// httpsCallable parsing issues in React Native with v2 functions.
+const SEMANTIC_CHAT_URL = 'https://us-central1-neuron-bb594.cloudfunctions.net/semanticChat';
+
+// Maps HTTP status or Firebase error codes to user-friendly messages
+function getUserErrorMessage(status?: number, serverMessage?: string): string {
+    if (status === 401 || serverMessage?.includes('unauthenticated')) {
+        return 'Your session has expired. Please sign in again.';
+    }
+    if (status === 400 || serverMessage?.includes('invalid-argument')) {
+        return 'Your query was invalid. Please try rephrasing.';
+    }
+    if (status === 503) {
+        return 'The service is temporarily unavailable. Please try again in a moment.';
+    }
+    if (status === 504 || serverMessage?.includes('timed out')) {
+        return 'The request took too long. Please try a shorter or simpler query.';
+    }
+    // Include the server message if available — helps diagnose issues
+    if (serverMessage) {
+        return `Something went wrong: ${serverMessage}`;
+    }
+    return 'Something went wrong while processing your request. Please try again.';
+}
+
 export default function SemanticChatScreen() {
     const navigation = useNavigation();
+    const { user } = useAuthStore();
     const [query, setQuery] = useState('');
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(false);
 
     const handleSend = async () => {
         if (!query.trim()) return;
+
+        // Guard: must be authenticated before calling the cloud function
+        if (!user) {
+            setMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                role: 'ai',
+                text: 'You need to be signed in to use Semantic Memory.',
+            }]);
+            return;
+        }
 
         const userMsg: ChatMessage = {
             id: Date.now().toString(),
@@ -33,28 +68,52 @@ export default function SemanticChatScreen() {
         setLoading(true);
 
         try {
-            const functions = getFunctions(app, 'us-central1');
-            const semanticChat = httpsCallable<{ query: string }, { answer: string; sources: string[] }>(functions, 'semanticChat');
-            
-            const response = await semanticChat({ query: userMsg.text });
-            const data = response.data;
+            // Get Firebase ID token for Cloud Functions auth
+            const { auth } = require('../../src/lib/firebase');
+            const idToken = await auth.currentUser?.getIdToken();
+            if (!idToken) throw new Error('Could not get auth token');
+
+            // Call the Cloud Function via raw fetch — consistent with sync-engine.ts
+            const response = await fetch(SEMANTIC_CHAT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`,
+                },
+                body: JSON.stringify({ data: { query: userMsg.text } }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`semanticChat HTTP ${response.status}:`, errorText);
+                // Try to parse the error JSON for a structured message
+                let serverMsg: string | undefined;
+                try {
+                    const parsed = JSON.parse(errorText);
+                    serverMsg = parsed?.error?.message || parsed?.error?.status;
+                } catch { /* not JSON */ }
+                throw { status: response.status, serverMessage: serverMsg };
+            }
+
+            const json = await response.json() as any;
+            // Firebase onCall responses are wrapped in a "result" field
+            const result = json.result;
 
             const aiMsg: ChatMessage = {
                 id: (Date.now() + 1).toString(),
                 role: 'ai',
-                text: data.answer,
-                sources: data.sources,
+                text: result.answer,
+                sources: result.sources,
             };
 
             setMessages((prev) => [...prev, aiMsg]);
         } catch (error: any) {
             console.error('Semantic Chat Error:', error);
-            const errorMsg: ChatMessage = {
+            setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'ai',
-                text: `I encountered an error trying to process your request: ${error.message || 'Unknown error'}`,
-            };
-            setMessages((prev) => [...prev, errorMsg]);
+                text: getUserErrorMessage(error?.status, error?.serverMessage || error?.message),
+            }]);
         } finally {
             setLoading(false);
         }
@@ -70,7 +129,7 @@ export default function SemanticChatScreen() {
                 <View style={{ width: 60 }} />
             </View>
 
-            <KeyboardAvoidingView 
+            <KeyboardAvoidingView
                 style={styles.keyboardAvoid}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
@@ -85,7 +144,7 @@ export default function SemanticChatScreen() {
                     ) : (
                         messages.map((msg) => (
                             <View key={msg.id} style={[
-                                styles.messageBubble, 
+                                styles.messageBubble,
                                 msg.role === 'user' ? styles.messageUser : styles.messageAi
                             ]}>
                                 <Text style={[
@@ -123,8 +182,8 @@ export default function SemanticChatScreen() {
                         onSubmitEditing={handleSend}
                         returnKeyType="send"
                     />
-                    <TouchableOpacity 
-                        style={[styles.sendButton, !query.trim() && styles.sendButtonDisabled]} 
+                    <TouchableOpacity
+                        style={[styles.sendButton, !query.trim() && styles.sendButtonDisabled]}
                         onPress={handleSend}
                         disabled={!query.trim() || loading}
                     >

@@ -1,10 +1,28 @@
 import { useGSuiteStore, ServiceName, SERVICE_NAMES } from '../store/gsuiteStore';
-import { getAccessToken } from '../lib/google-api';
+import { refreshAccessToken } from '../lib/google-api';
+
+const SYNC_URL = 'https://us-central1-neuron-bb594.cloudfunctions.net/syncService';
+
+// Shared fetch logic — extracted so the retry path can reuse it without duplication.
+async function callSyncFunction(
+    service: ServiceName,
+    accessToken: string,
+    idToken: string,
+): Promise<Response> {
+    return fetch(SYNC_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ data: { service, accessToken } }),
+    });
+}
 
 /**
  * Sync a single service remotely via Firebase Cloud Functions.
- * This prevents OOM errors on the mobile device by offloading the 
- * heavy data processing to the server.
+ * Always force-refreshes the Google access token before calling the
+ * backend so it never arrives expired. Retries once on 401.
  */
 export async function syncService(
     uid: string,
@@ -14,34 +32,27 @@ export async function syncService(
     store.setSyncStatus(service, 'syncing');
 
     try {
-        // 1. Get a fresh access token for the Cloud Function to use
-        const accessToken = await getAccessToken();
+        // 1. Force-refresh the Google access token so the backend always
+        //    receives one with a full ~60 min lifetime.
+        let accessToken = await refreshAccessToken();
 
-        // 2. Get the Firebase ID token for authentication
+        // 2. Get the Firebase ID token for Cloud Functions auth
         const { auth } = require('../lib/firebase');
         const user = auth.currentUser;
         if (!user) throw new Error('User not authenticated');
         const idToken = await user.getIdToken();
 
         console.info(`Calling remote syncService for ${service}...`);
-        
-        // 3. Call the remote sync function via raw fetch
-        // We use raw fetch because the Firebase SDK's httpsCallable has 
-        // known parsing issues in some React Native environments with v2 functions.
-        // It's also much easier to debug raw network requests.
-        const response = await fetch('https://us-central1-neuron-bb594.cloudfunctions.net/syncService', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`,
-            },
-            body: JSON.stringify({
-                data: {
-                    service,
-                    accessToken,
-                },
-            }),
-        });
+
+        // 3. Call the Cloud Function
+        let response = await callSyncFunction(service, accessToken, idToken);
+
+        // 4. On 401 — refresh token one more time and retry once
+        if (response.status === 401) {
+            console.warn(`Token rejected for ${service}, refreshing and retrying...`);
+            accessToken = await refreshAccessToken();
+            response = await callSyncFunction(service, accessToken, idToken);
+        }
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -49,10 +60,10 @@ export async function syncService(
         }
 
         const json = await response.json() as any;
-        
+
         // Firebase onCall responses are wrapped in a "result" field
         const result = json.result;
-        
+
         if (!result || result.success === false) {
             throw new Error(result?.error || 'Unknown error from sync service');
         }
