@@ -37,12 +37,52 @@ const DRIVE_FIELDS = [
   'shared',
 ].join(',');
 
+async function buildFolderMap(accessToken: string): Promise<Record<string, { name: string; parents?: string[] }>> {
+  const folderMap: Record<string, { name: string; parents?: string[] }> = {};
+  let pageToken: string | undefined;
+
+  do {
+    const url = buildUrl(API, '/drive/v3/files', {
+      q: 'mimeType=\'application/vnd.google-apps.folder\'',
+      fields: 'nextPageToken,files(id,name,parents)',
+      pageSize: '1000',
+      pageToken,
+    });
+    const response = await googleFetch<DriveListResponse>(accessToken, url);
+
+    if (response.files) {
+      for (const file of response.files) {
+        folderMap[file.id] = { name: file.name, parents: file.parents };
+      }
+    }
+    pageToken = response.nextPageToken;
+  } while (pageToken);
+
+  return folderMap;
+}
+
+function buildFolderPath(folderId: string, folderMap: Record<string, { name: string; parents?: string[] }>): string {
+  const path: string[] = [];
+  let currentId: string | undefined = folderId;
+  const visited = new Set<string>(); // Prevent infinite loops in cyclic dependencies (rare but possible in Drive)
+
+  while (currentId && folderMap[currentId] && !visited.has(currentId)) {
+    visited.add(currentId);
+    path.unshift(folderMap[currentId].name);
+    currentId = folderMap[currentId].parents?.[0]; // Default to first parent
+  }
+
+  return path.join(' / ');
+}
+
 export async function syncDrive(accessToken: string, uid: string): Promise<number> {
   const db = admin.firestore();
   const metaRef = db.doc(`users/${uid}/sync_meta/status`);
   const metaDoc = await metaRef.get();
   const metaData = metaDoc.data();
   const lastSync = metaData?.drive?.lastSync;
+
+  const folderMap = await buildFolderMap(accessToken);
 
   let totalItemCount = 0;
   let pageToken: string | undefined;
@@ -63,22 +103,27 @@ export async function syncDrive(accessToken: string, uid: string): Promise<numbe
     const response = await googleFetch<DriveListResponse>(accessToken, url);
 
     if (response.files && response.files.length > 0) {
-      const writes = response.files.map(file => ({
-        path: ['drive_files', file.id],
-        data: {
-          name: file.name,
-          mimeType: file.mimeType,
-          size: file.size ?? null,
-          modifiedTime: file.modifiedTime,
-          createdTime: file.createdTime,
-          parents: file.parents ?? [],
-          webViewLink: file.webViewLink ?? null,
-          iconLink: file.iconLink ?? null,
-          owners: file.owners ?? [],
-          shared: file.shared,
-          syncedAt: new Date().toISOString(),
-        },
-      }));
+      const writes = response.files.map(file => {
+        const folderPath = file.parents?.[0] ? buildFolderPath(file.parents[0], folderMap) : null;
+
+        return {
+          path: ['drive_files', file.id],
+          data: {
+            name: file.name,
+            mimeType: file.mimeType,
+            size: file.size ?? null,
+            modifiedTime: file.modifiedTime,
+            createdTime: file.createdTime,
+            parents: file.parents ?? [],
+            folderPath,
+            webViewLink: file.webViewLink ?? null,
+            iconLink: file.iconLink ?? null,
+            owners: file.owners ?? [],
+            shared: file.shared,
+            syncedAt: new Date().toISOString(),
+          },
+        };
+      });
 
       await batchWriteUserDocs(uid, writes);
       totalItemCount += writes.length;

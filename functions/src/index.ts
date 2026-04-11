@@ -19,6 +19,8 @@ import { syncDocs } from './services/docs';
 import { syncCalendar } from './services/calendar';
 import { syncContacts } from './services/contacts';
 import { syncTasks } from './services/tasks';
+import { syncKeep } from './services/keep';
+import { syncChat } from './services/chat';
 
 interface SyncRequestData {
   service: string;
@@ -70,6 +72,12 @@ export const syncService = onCall<SyncRequestData>(async request => {
         break;
       case 'tasks':
         itemCount = await syncTasks(accessToken, uid);
+        break;
+      case 'keep':
+        itemCount = await syncKeep(accessToken, uid);
+        break;
+      case 'chat':
+        itemCount = await syncChat(accessToken, uid);
         break;
       default:
         throw new HttpsError('invalid-argument', `Unsupported service: ${service}`);

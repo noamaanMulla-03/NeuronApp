@@ -19,12 +19,13 @@ interface CalendarEvent {
     location?: string;
     start: { dateTime?: string; date?: string; timeZone?: string };
     end: { dateTime?: string; date?: string; timeZone?: string };
-    attendees?: { email: string; displayName?: string; responseStatus?: string }[];
+    attendees?: { email: string; displayName?: string; responseStatus?: string; self?: boolean }[];
     status: string;
     created: string;
     updated: string;
     recurringEventId?: string;
     organizer?: { email: string; displayName?: string };
+    hangoutLink?: string;
 }
 
 interface CalendarListResponse {
@@ -73,7 +74,7 @@ export async function syncCalendar(accessToken: string, uid: string): Promise<nu
         orderBy: 'startTime',
         pageToken,
         fields: 'nextPageToken,items(id,summary,description,location,start,end,' +
-                'attendees,status,created,updated,organizer,recurringEventId)',
+                'attendees,status,created,updated,organizer,recurringEventId,hangoutLink)',
       };
       if (lastSync) {
         params.updatedMin = lastSync;
@@ -91,24 +92,29 @@ export async function syncCalendar(accessToken: string, uid: string): Promise<nu
 
       const response = await googleFetch<EventsListResponse>(accessToken, eventsUrl);
       if (response.items && response.items.length > 0) {
-        const writes = response.items.map(event => ({
-          path: ['calendar_events', event.id],
-          data: {
-            calendarId: calendar.id,
-            summary: event.summary ?? '',
-            description: event.description ?? '',
-            location: event.location ?? '',
-            start: event.start,
-            end: event.end,
-            attendees: event.attendees ?? [],
-            status: event.status,
-            created: event.created,
-            updated: event.updated,
-            organizer: event.organizer ?? null,
-            recurringEventId: event.recurringEventId ?? null,
-            syncedAt: new Date().toISOString(),
-          },
-        }));
+        const writes = response.items.map(event => {
+          const userAttendee = event.attendees?.find(a => a.self === true);
+          return {
+            path: ['calendar_events', event.id],
+            data: {
+              calendarId: calendar.id,
+              summary: event.summary ?? '',
+              description: event.description ?? '',
+              location: event.location ?? '',
+              start: event.start,
+              end: event.end,
+              attendees: event.attendees ?? [],
+              status: event.status,
+              created: event.created,
+              updated: event.updated,
+              organizer: event.organizer ?? null,
+              recurringEventId: event.recurringEventId ?? null,
+              hangoutLink: event.hangoutLink ?? null,
+              userResponseStatus: userAttendee?.responseStatus ?? null,
+              syncedAt: new Date().toISOString(),
+            },
+          };
+        });
 
         await batchWriteUserDocs(uid, writes);
         totalEvents += writes.length;

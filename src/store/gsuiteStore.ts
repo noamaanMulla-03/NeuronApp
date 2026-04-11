@@ -8,6 +8,8 @@ export const SERVICE_NAMES = [
     'contacts',
     'tasks',
     'docs',
+    'keep',
+    'chat',
 ] as const;
 
 export type ServiceName = (typeof SERVICE_NAMES)[number];

@@ -1,97 +1,109 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# NeuronApp: The AI Personal Assistant
 
-# Getting Started
+NeuronApp is a React Native mobile application designed to be your proactive, intelligent personal assistant. Instead of just a generic chatbot, NeuronApp integrates deeply with your Google Workspace (GSuite) to understand your schedule, your communications, and your documents, offering personalized insights, autonomous task management, and semantic recall of your data.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+It is built around the **"Cognitive Sanctuary"** design system—a sophisticated, tonally deep UI that prioritizes focus and proactively manages your cognitive load.
 
-## Step 1: Start Metro
+---
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## 🚀 Core Capabilities
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+### 1. Unified Google Workspace Synchronization
+NeuronApp acts as a central hub, extracting deep context from your digital life:
+- **Calendar:** RSVP status, meeting links, and conflict detection.
+- **Gmail:** Importance markers, categorizations, and communication history.
+- **Drive & Docs:** Folder hierarchies and unresolved actionable comments.
+- **Contacts:** Deep relationships and biographical notes.
+- **Tasks, Keep & Chat:** Comprehensive daily tracking and note synchronization.
 
+### 2. Semantic Memory (RAG) - *In Development*
+Say goodbye to rigid keyword searches. NeuronApp uses **Firestore Vector Search** and **Vertex AI embeddings (`text-embedding-004`)** to index your digital life. You can ask natural language questions like, "What did John say about the Q3 roadmap last month?" and the AI will synthesize an answer grounded in your emails, docs, and notes.
+
+### 3. Proactive Intelligence - *In Development*
+Powered by **Firebase Genkit** and **Gemini 1.5 Flash/Pro**, NeuronApp transforms from a passive tool to an active agent:
+- **Daily Briefing:** A synthesized morning narrative of your priorities, conflicting meetings, and urgent emails.
+- **Autonomous Agenda Balancing:** The AI detects meeting-heavy days and proactively suggests rescheduling internal syncs to protect your Deep Work time.
+- **Contextual Task Management:** Extracts implicit commitments from outgoing emails (e.g., "I'll review this by Friday") and automatically creates Google Tasks linked to the relevant documents.
+- **Ghostwriter Agent:** Drafts replies and new documents matching your unique writing style, learned from your historical sent emails.
+
+---
+
+## 🛠️ Tech Stack & Architecture
+
+NeuronApp heavily leverages the Google Cloud and Firebase ecosystems for a robust, scalable, and secure AI architecture.
+
+### Mobile Frontend
+- **Framework:** React Native (TypeScript)
+- **Design System:** Custom "Cognitive Sanctuary" (Tonalism, Asymmetry, Manrope/Inter typography)
+- **State Management:** Zustand (`authStore`, `gsuiteStore`)
+
+### Backend & AI Orchestration (Firebase)
+- **Compute:** Firebase Cloud Functions (Gen 2) & Cloud Scheduler
+- **Database:** Cloud Firestore (Document Storage) & Firestore Vector Search (Semantic Memory)
+- **AI Orchestration:** Firebase Genkit
+- **LLMs & Embeddings:** Gemini 1.5 Pro (Reasoning & Analysis), Gemini 1.5 Flash (Fast Generation), Vertex AI `text-embedding-004`
+- **Authentication:** Firebase Auth
+- **Push Notifications:** Firebase Cloud Messaging (FCM)
+
+---
+
+## 📖 Getting Started
+
+### Prerequisites
+- Node.js (v22+ recommended for Cloud Functions)
+- React Native environment setup (Android Studio / Xcode)
+- Firebase CLI installed globally (`npm install -g firebase-tools`)
+
+### 1. Clone & Install
 ```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
+git clone https://github.com/your-org/NeuronApp.git
+cd NeuronApp
+npm install
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
+### 2. Firebase Setup
+You must connect the app to a Firebase project with the necessary APIs enabled (Firestore, Functions, Vertex AI, Google Workspace APIs).
 ```sh
-# Using npm
+# Login to Firebase
+firebase login
+
+# Set your active project
+firebase use --add
+```
+
+Deploy the backend services:
+```sh
+cd functions
+npm install
+npm run deploy
+cd ..
+```
+
+### 3. Run the App
+Start the Metro bundler:
+```sh
+npm start
+```
+
+Run on your connected device or emulator:
+```sh
+# For Android
 npm run android
 
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+# For iOS
 npm run ios
-
-# OR using Yarn
-yarn ios
 ```
+*(Note: We recommend running the Android build directly from Android Studio to a physical device for the best performance and debugging experience).*
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+---
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## 🗺️ Roadmap & Contributing
 
-## Step 3: Modify your app
+NeuronApp is rapidly evolving. We are currently transitioning from our Phase 1 (Data Synchronization) into Phase 2 (Proactive Intelligence & Semantic Memory).
 
-Now that you have successfully run the app, let's make changes!
+For a detailed breakdown of upcoming features, technical blueprints, and the architecture of our AI agents, please refer to the [ROADMAP.md](./ROADMAP.md) file.
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+---
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+## 🎨 Design Philosophy: The Cognitive Sanctuary
+Our UI is rooted in soft surgical white (`#F8F9FA`) with high-contrast `Neuron Blue` (`#1A73E8`) accents. We follow the "No-Line" rule—boundaries are defined through background color shifts rather than harsh borders, creating a calm, focused environment for the user. See `GEMINI.md` and the `src/theme` directory for implementation details.

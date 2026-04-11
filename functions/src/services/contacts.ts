@@ -29,6 +29,15 @@ interface PersonPhoto {
   url: string;
 }
 
+interface PersonRelation {
+  person?: string;
+  type?: string;
+}
+
+interface PersonBiography {
+  value?: string;
+}
+
 interface Person {
   resourceName: string;
   etag: string;
@@ -37,6 +46,8 @@ interface Person {
   phoneNumbers?: PersonPhone[];
   organizations?: PersonOrganization[];
   photos?: PersonPhoto[];
+  relations?: PersonRelation[];
+  biographies?: PersonBiography[];
 }
 
 interface ConnectionsResponse {
@@ -47,7 +58,7 @@ interface ConnectionsResponse {
   totalItems?: number;
 }
 
-const PERSON_FIELDS = 'names,emailAddresses,phoneNumbers,organizations,photos';
+const PERSON_FIELDS = 'names,emailAddresses,phoneNumbers,organizations,photos,relations,biographies';
 
 export async function syncContacts(accessToken: string, uid: string): Promise<number> {
   const db = admin.firestore();
@@ -112,6 +123,11 @@ export async function syncContacts(accessToken: string, uid: string): Promise<nu
               name: o.name ?? '',
               title: o.title ?? '',
             })),
+            relationships: (person.relations ?? []).map(r => ({
+              person: r.person ?? '',
+              type: r.type ?? '',
+            })),
+            notes: person.biographies?.[0]?.value ?? '',
             photoUrl: person.photos?.[0]?.url ?? null,
             syncedAt: new Date().toISOString(),
           },

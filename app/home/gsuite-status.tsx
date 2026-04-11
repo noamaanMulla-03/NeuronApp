@@ -27,6 +27,8 @@ const SERVICE_LABELS: Record<ServiceName, { label: string; icon: string }> = {
     contacts: { label: 'Contacts', icon: '👤' },
     tasks: { label: 'Tasks', icon: '✅' },
     docs: { label: 'Workspace Documents', icon: '📄' },
+    keep: { label: 'Google Keep', icon: '📝' },
+    chat: { label: 'Google Chat', icon: '💬' },
 };
 
 function getStatusColor(status: SyncStatus): string {

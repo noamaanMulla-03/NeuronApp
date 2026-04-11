@@ -64,6 +64,18 @@ const SERVICES: ServiceInfo[] = [
         description: 'Text content from documents',
         icon: '📄',
     },
+    {
+        key: 'keep',
+        label: 'Google Keep',
+        description: 'Notes and lists',
+        icon: '📝',
+    },
+    {
+        key: 'chat',
+        label: 'Google Chat',
+        description: 'Direct messages and spaces',
+        icon: '💬',
+    },
 ];
 
 export default function GSuiteConnectScreen() {

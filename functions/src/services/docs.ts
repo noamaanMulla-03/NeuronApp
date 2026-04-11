@@ -39,6 +39,29 @@ async function fetchDocContent(
   }
 }
 
+async function fetchDocComments(accessToken: string, fileId: string): Promise<{ author: string; content: string }[]> {
+  const url = buildUrl(BASE_URLS.drive, `/drive/v3/files/${fileId}/comments`, {
+    fields: 'comments(author(displayName),content,resolved)',
+  });
+
+  try {
+    const response = await googleFetch<{
+      comments?: { author?: { displayName?: string }; content?: string; resolved?: boolean }[];
+    }>(accessToken, url);
+    if (!response.comments) return [];
+
+    return response.comments
+      .filter(c => !c.resolved && c.content)
+      .map(c => ({
+        author: c.author?.displayName ?? 'Unknown',
+        content: c.content ?? '',
+      }));
+  } catch (e) {
+    console.warn(`Failed to fetch comments for ${fileId}`, e);
+    return [];
+  }
+}
+
 export async function syncDocs(accessToken: string, uid: string): Promise<number> {
   const workspaceFiles = await getWorkspaceFileIds(accessToken);
 
@@ -57,6 +80,7 @@ export async function syncDocs(accessToken: string, uid: string): Promise<number
     const results = await Promise.allSettled(
       batch.map(async file => {
         const content = await fetchDocContent(accessToken, file.id, file.mimeType);
+        const comments = await fetchDocComments(accessToken, file.id);
         const cappedText = content.text.length > 900_000 ?
           content.text.slice(0, 900_000) :
           content.text;
@@ -68,6 +92,7 @@ export async function syncDocs(accessToken: string, uid: string): Promise<number
             mimeType: file.mimeType,
             extractedText: cappedText,
             textLength: content.text.length,
+            comments,
             syncedAt: new Date().toISOString(),
           },
         };

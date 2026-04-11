@@ -143,6 +143,11 @@ export async function syncGmail(accessToken: string, uid: string): Promise<numbe
           const body = extractPlainText(msg.payload);
           const cappedBody = body.length > 900_000 ? body.slice(0, 900_000) : body;
 
+          const labelIds = msg.labelIds ?? [];
+          const isImportant = labelIds.includes('IMPORTANT');
+          const categoryLabel = labelIds.find(l => l.startsWith('CATEGORY_'));
+          const category = categoryLabel ? categoryLabel.replace('CATEGORY_', '') : null;
+
           return {
             path: ['gmail_messages', msg.id],
             data: {
@@ -152,7 +157,9 @@ export async function syncGmail(accessToken: string, uid: string): Promise<numbe
               to: getHeader(msg.payload.headers, 'To'),
               date: getHeader(msg.payload.headers, 'Date'),
               snippet: msg.snippet,
-              labelIds: msg.labelIds ?? [],
+              labelIds: labelIds,
+              isImportant,
+              category,
               body: cappedBody,
               internalDate: msg.internalDate,
               syncedAt: new Date().toISOString(),

@@ -7,6 +7,8 @@ const BASE_URLS: Record<string, string> = {
   docs: 'https://docs.googleapis.com',
   sheets: 'https://sheets.googleapis.com',
   slides: 'https://slides.googleapis.com',
+  keep: 'https://keep.googleapis.com',
+  chat: 'https://chat.googleapis.com',
 };
 
 async function delay(ms: number): Promise<void> {
