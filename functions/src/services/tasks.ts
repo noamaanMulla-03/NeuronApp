@@ -99,7 +99,7 @@ export async function syncTasks(accessToken: string, uid: string): Promise<numbe
             syncedAt: new Date().toISOString(),
           },
         }));
-        
+
         await batchWriteUserDocs(uid, writes);
         totalTasks += writes.length;
       }

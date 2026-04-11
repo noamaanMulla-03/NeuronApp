@@ -1,18 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert, TouchableOpacity, Dimensions } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '../../src/components/Button';
 import { useAuthStore } from '../../src/store/authStore';
-import { signOutUser } from '../../src/lib/auth';
 import { theme } from '../../src/theme';
 import { useNavigation } from '@react-navigation/native';
-
-const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
     const { user } = useAuthStore();
     const navigation = useNavigation();
-    const [loading, setLoading] = useState(false);
 
     const getUserName = (): string => {
         if (user?.displayName) {
@@ -26,7 +21,7 @@ export default function HomeScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            {/* TopAppBar */}
+            {/* TopAppBar: Displays user avatar, app logo, and search icon. */}
             <View style={styles.appBar}>
                 <View style={styles.appBarLeft}>
                     <TouchableOpacity 
@@ -55,99 +50,23 @@ export default function HomeScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Welcome Hero */}
+                {/* Welcome Hero: Greets the user and sets the cognitive environment tone. */}
                 <View style={styles.hero}>
                     <Text style={styles.welcomeText}>Good morning, {getUserName()}.</Text>
                     <Text style={styles.heroSubtitle}>Your cognitive environment is optimized for deep focus today.</Text>
                 </View>
 
-                {/* Proactive Daily Briefing Card */}
-                <View style={styles.briefingCard}>
-                    <View style={styles.cardHeader}>
-                        <Text style={styles.cardIcon}>✨</Text>
-                        <Text style={styles.cardTitle}>Proactive Daily Briefing</Text>
-                    </View>
-                    <View style={styles.briefingContent}>
-                        <Text style={styles.briefingText}>
-                            Your day centers around the <Text style={styles.highlightText}>Q4 Growth Strategy</Text> launch. You have three back-to-back stakeholder syncs starting at 10:00 AM. 
-                        </Text>
-                        <Text style={styles.briefingText}>
-                            I've detected a conflict in your 2:00 PM slot—the Project X review overlaps with the leadership standup. I recommend prioritizing the standup as your input is flagged as critical.
-                        </Text>
-                        <Text style={styles.briefingText}>
-                            I have prepared draft responses for the budget inquiries based on your previous constraints.
-                        </Text>
-                    </View>
-                    <View style={styles.cardActions}>
-                        <Button 
-                            title="Handle Conflicts" 
-                            onPress={() => {}} 
-                            style={styles.actionButton}
-                        />
-                        <Button 
-                            title="View GSuite Items" 
-                            onPress={() => navigation.navigate('GSuiteStatus' as never)} 
-                            variant="secondary"
-                            style={styles.actionButtonSecondary}
-                        />
-                    </View>
-                </View>
+                {/* 
+                  Note: The static 'Proactive Daily Briefing', 'Agenda Balancing', and 'Recent Insights'
+                  components have been removed to eliminate dummy placeholders. 
+                  Future implementation will dynamically render these sections based on synced data.
+                */}
 
-                {/* Agenda Balancing Card */}
-                <View style={styles.agendaCard}>
-                    <View style={styles.agendaHeader}>
-                        <Text style={styles.agendaIcon}>⚖️</Text>
-                        <View style={styles.tag}>
-                            <Text style={styles.tagText}>HIGH LOAD</Text>
-                        </View>
-                    </View>
-                    <Text style={styles.agendaTitle}>Agenda Balancing</Text>
-                    <Text style={styles.agendaSubtitle}>Today is 85% meetings. Your cognitive capacity for deep work will be depleted by 3:00 PM.</Text>
-                    
-                    <View style={styles.recommendationBox}>
-                        <View style={styles.recHeader}>
-                            <Text style={styles.recIcon}>⚡</Text>
-                            <Text style={styles.recLabel}>RECOMMENDATION</Text>
-                        </View>
-                        <Text style={styles.recText}>Protect 2 hours of Deep Work by moving the 'Social Media Sync' to Thursday morning.</Text>
-                        <TouchableOpacity style={styles.recButton}>
-                            <Text style={styles.recButtonText}>Reschedule & Protect</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-
-                {/* Recent Insights */}
-                <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Recent Insights</Text>
-                </View>
-
-                <View style={styles.insightRow}>
-                    <TouchableOpacity style={[styles.insightCard, { borderLeftColor: '#1A73E8' }]}>
-                        <View style={styles.insightHeader}>
-                            <Text style={styles.insightTypeIcon}>📄</Text>
-                            <Text style={styles.insightLabel}>DOCUMENT</Text>
-                        </View>
-                        <Text style={styles.insightTitle}>Summarized Project X proposal</Text>
-                        <Text style={styles.insightDesc}>Timeline shifted by 2 weeks to accommodate security audits.</Text>
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.insightRow}>
-                    <TouchableOpacity style={[styles.insightCard, { borderLeftColor: '#FF9500' }]}>
-                        <View style={styles.insightHeader}>
-                            <Text style={styles.insightTypeIcon}>🧠</Text>
-                            <Text style={styles.insightLabel}>PATTERN</Text>
-                        </View>
-                        <Text style={styles.insightTitle}>Meeting fatigue detected</Text>
-                        <Text style={styles.insightDesc}>Tuesday afternoons show a 30% drop in response speed.</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Chat Input Placeholder */}
+                {/* Chat Input Placeholder: Entry point for proactive AI interaction. */}
                 <View style={styles.chatAnchor}>
                     <TouchableOpacity 
                         style={styles.chatInput}
-                        onPress={() => navigation.navigate('GSuiteConnect' as never)} // Placeholder navigation
+                        onPress={() => navigation.navigate('GSuiteConnect' as never)}
                     >
                         <Text style={styles.chatIcon}>💬</Text>
                         <Text style={styles.chatPlaceholder}>What's on your mind?</Text>
@@ -161,7 +80,7 @@ export default function HomeScreen() {
                 <View style={styles.spacer} />
             </ScrollView>
 
-            {/* Bottom Nav Shell Placeholder */}
+            {/* Bottom Nav Shell: Navigation bar for quick access to core features. */}
             <View style={styles.bottomNav}>
                 <TouchableOpacity style={styles.navItemActive}>
                     <Text style={styles.navIconActive}>🏠</Text>
@@ -189,6 +108,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: theme.colors.background,
     },
+    // TopAppBar Styles
     appBar: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -249,9 +169,11 @@ const styles = StyleSheet.create({
     iconText: {
         fontSize: 18,
     },
+    // ScrollContent Styles
     scrollContent: {
         padding: theme.spacing.lg,
     },
+    // Hero Styles
     hero: {
         marginTop: theme.spacing.md,
         marginBottom: theme.spacing.xl,
@@ -268,186 +190,7 @@ const styles = StyleSheet.create({
         color: theme.colors.onSurfaceVariant,
         lineHeight: 24,
     },
-    briefingCard: {
-        backgroundColor: theme.colors.surfaceContainerLowest,
-        borderRadius: 24,
-        padding: 24,
-        marginBottom: 24,
-        shadowColor: theme.colors.onSurface,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 2,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    cardIcon: {
-        fontSize: 24,
-        marginRight: 10,
-        color: theme.colors.primary,
-    },
-    cardTitle: {
-        ...theme.typography.styles.headlineMD,
-        fontSize: 20,
-        color: theme.colors.onSurface,
-    },
-    briefingContent: {
-        marginBottom: 24,
-    },
-    briefingText: {
-        ...theme.typography.styles.bodyLG,
-        color: theme.colors.onSurfaceVariant,
-        lineHeight: 24,
-        marginBottom: 16,
-    },
-    highlightText: {
-        color: theme.colors.primary,
-        fontWeight: '600',
-    },
-    cardActions: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    actionButton: {
-        flex: 1,
-        minHeight: 44,
-    },
-    actionButtonSecondary: {
-        flex: 1.2,
-        minHeight: 44,
-    },
-    agendaCard: {
-        backgroundColor: theme.colors.primaryFixed,
-        borderRadius: 24,
-        padding: 24,
-        marginBottom: 32,
-    },
-    agendaHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 20,
-    },
-    agendaIcon: {
-        fontSize: 24,
-        color: theme.colors.primaryContainer,
-    },
-    tag: {
-        backgroundColor: theme.colors.primaryContainer + '1A',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 4,
-    },
-    tagText: {
-        fontSize: 10,
-        fontWeight: '800',
-        color: theme.colors.primaryContainer,
-        letterSpacing: 1,
-    },
-    agendaTitle: {
-        ...theme.typography.styles.headlineMD,
-        fontSize: 24,
-        color: theme.colors.primaryContainer,
-        marginBottom: 12,
-    },
-    agendaSubtitle: {
-        ...theme.typography.styles.bodyLG,
-        color: theme.colors.primaryContainer,
-        lineHeight: 22,
-        marginBottom: 24,
-        opacity: 0.8,
-    },
-    recommendationBox: {
-        backgroundColor: theme.colors.surfaceContainerLowest + '66', // 40% opacity
-        padding: 16,
-        borderRadius: 16,
-    },
-    recHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 8,
-    },
-    recIcon: {
-        fontSize: 14,
-        marginRight: 6,
-    },
-    recLabel: {
-        fontSize: 10,
-        fontWeight: '800',
-        color: theme.colors.primaryContainer,
-        letterSpacing: 1,
-    },
-    recText: {
-        fontSize: 14,
-        color: theme.colors.primaryContainer,
-        lineHeight: 20,
-        marginBottom: 16,
-    },
-    recButton: {
-        backgroundColor: theme.colors.primaryContainer,
-        paddingVertical: 10,
-        borderRadius: 8,
-        alignItems: 'center',
-    },
-    recButtonText: {
-        color: '#fff',
-        fontSize: 13,
-        fontWeight: '700',
-    },
-    sectionHeader: {
-        marginBottom: 16,
-        paddingHorizontal: 8,
-    },
-    sectionTitle: {
-        ...theme.typography.styles.headlineMD,
-        fontSize: 20,
-        color: theme.colors.onSurface,
-    },
-    insightRow: {
-        marginBottom: 16,
-    },
-    insightCard: {
-        backgroundColor: theme.colors.surfaceContainerLowest,
-        borderRadius: 16,
-        padding: 20,
-        borderLeftWidth: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.03,
-        shadowRadius: 8,
-        elevation: 1,
-    },
-    insightHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 12,
-    },
-    insightTypeIcon: {
-        fontSize: 20,
-    },
-    insightLabel: {
-        fontSize: 10,
-        fontWeight: '800',
-        color: theme.colors.outline,
-        letterSpacing: 1,
-    },
-    insightTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: theme.colors.onSurface,
-        marginBottom: 4,
-        fontFamily: theme.typography.fonts.body,
-    },
-    insightDesc: {
-        fontSize: 14,
-        color: theme.colors.onSurfaceVariant,
-        lineHeight: 20,
-        fontFamily: theme.typography.fonts.body,
-    },
+    // ChatAnchor Styles
     chatAnchor: {
         marginTop: 40,
         alignItems: 'center',
@@ -503,6 +246,7 @@ const styles = StyleSheet.create({
     spacer: {
         height: 100,
     },
+    // BottomNav Styles
     bottomNav: {
         flexDirection: 'row',
         justifyContent: 'space-around',

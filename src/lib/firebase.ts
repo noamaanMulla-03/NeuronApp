@@ -30,4 +30,4 @@ try {
     auth = getAuth(app);
 }
 
-export { auth };
+export { auth, app };

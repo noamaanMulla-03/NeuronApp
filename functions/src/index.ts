@@ -1,6 +1,7 @@
 import * as admin from 'firebase-admin';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { setGlobalOptions } from 'firebase-functions/v2';
+import * as logger from 'firebase-functions/logger';
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -28,8 +29,15 @@ interface SyncRequestData {
  * Callable function to sync a specific Google Workspace service.
  */
 export const syncService = onCall<SyncRequestData>(async request => {
+  logger.info('syncService called', {
+    service: request.data?.service,
+    hasToken: !!request.data?.accessToken,
+    uid: request.auth?.uid,
+  });
+
   // 1. Verify Authentication
   if (!request.auth) {
+    logger.error('Unauthorized call to syncService');
     throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
   }
 
@@ -37,6 +45,7 @@ export const syncService = onCall<SyncRequestData>(async request => {
   const uid = request.auth.uid;
 
   if (!service || !accessToken) {
+    logger.error('Invalid arguments', { service, hasToken: !!accessToken });
     throw new HttpsError('invalid-argument', 'The function must be called with "service" and "accessToken".');
   }
 
@@ -62,19 +71,33 @@ export const syncService = onCall<SyncRequestData>(async request => {
       case 'tasks':
         itemCount = await syncTasks(accessToken, uid);
         break;
-      // Add other services as they are ported
       default:
         throw new HttpsError('invalid-argument', `Unsupported service: ${service}`);
     }
 
+    logger.info(`Sync complete for ${service}`, { itemCount, uid });
     return { success: true, itemCount };
   } catch (error: any) {
-    console.error(`Sync error for ${service}:`, error);
+    logger.error(`Sync error for ${service}`, {
+      error: error.message,
+      stack: error.stack,
+      uid,
+    });
 
     if (error.message === 'UNAUTHENTICATED') {
       throw new HttpsError('unauthenticated', 'Google Access Token is expired or invalid.');
     }
 
-    throw new HttpsError('internal', error.message || 'An unknown error occurred during sync.');
+    // Re-throw HttpsErrors, otherwise wrap as unknown to expose to client
+    // Note: Forced redeploy to ensure new error handling is active.
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+
+    throw new HttpsError(
+      'unknown',
+      error.message || 'An unknown error occurred during sync.',
+      { stack: error.stack }
+    );
   }
 });

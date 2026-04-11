@@ -121,7 +121,7 @@ export async function syncContacts(accessToken: string, uid: string): Promise<nu
       await batchWriteUserDocs(uid, writes);
       totalItemCount += writes.length;
     }
-    
+
     if (response.nextSyncToken) {
       newSyncToken = response.nextSyncToken;
     }

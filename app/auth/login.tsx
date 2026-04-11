@@ -6,14 +6,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme } from '../../src/theme';
 import { Button } from '../../src/components/Button';
 import { signInWithGoogle } from '../../src/lib/auth';
-
-const { width } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -22,7 +19,7 @@ export default function LoginScreen() {
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
-    } catch (error: any) {
+    } catch {
       // Error handled
     } finally {
       setGoogleLoading(false);

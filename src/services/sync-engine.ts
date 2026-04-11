@@ -1,4 +1,3 @@
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { useGSuiteStore, ServiceName, SERVICE_NAMES } from '../store/gsuiteStore';
 import { getAccessToken } from '../lib/google-api';
 
@@ -18,20 +17,53 @@ export async function syncService(
         // 1. Get a fresh access token for the Cloud Function to use
         const accessToken = await getAccessToken();
 
-        // 2. Call the remote sync function
-        const functions = getFunctions();
-        const remoteSync = httpsCallable<{ service: string; accessToken: string }, { itemCount: number }>(
-            functions, 
-            'syncService'
-        );
+        // 2. Get the Firebase ID token for authentication
+        const { auth } = require('../lib/firebase');
+        const user = auth.currentUser;
+        if (!user) throw new Error('User not authenticated');
+        const idToken = await user.getIdToken();
+
+        console.info(`Calling remote syncService for ${service}...`);
         
-        const response = await remoteSync({ service, accessToken });
-        const itemCount = response.data.itemCount;
+        // 3. Call the remote sync function via raw fetch
+        // We use raw fetch because the Firebase SDK's httpsCallable has 
+        // known parsing issues in some React Native environments with v2 functions.
+        // It's also much easier to debug raw network requests.
+        const response = await fetch('https://us-central1-neuron-bb594.cloudfunctions.net/syncService', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({
+                data: {
+                    service,
+                    accessToken,
+                },
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Server returned ${response.status}: ${errorText}`);
+        }
+
+        const json = await response.json();
+        
+        // Firebase onCall responses are wrapped in a "result" field
+        const result = json.result;
+        
+        if (!result || result.success === false) {
+            throw new Error(result?.error || 'Unknown error from sync service');
+        }
+
+        const itemCount = result.itemCount || 0;
+        console.info(`Successfully synced ${itemCount} items for ${service}`);
 
         store.markSyncDone(service, itemCount);
         return { service, itemCount };
     } catch (error: any) {
-        console.error(`Cloud Sync failed for ${service}:`, error);
+        console.error(`Cloud Sync failed for ${service}:`, error.message);
         const message = error?.message ?? 'Unknown error';
         store.setSyncStatus(service, 'error', message);
         return { service, itemCount: 0, error: message };

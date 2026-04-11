@@ -28,7 +28,7 @@ export default function ProfileScreen() {
                     <Text style={styles.backIcon}>←</Text>
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Cognitive Identity</Text>
-                <View style={{ width: 40 }} />
+                <View style={styles.headerSpacer} />
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -134,6 +134,9 @@ const styles = StyleSheet.create({
         ...theme.typography.styles.headlineMD,
         color: theme.colors.onSurface,
     },
+    headerSpacer: {
+        width: 40,
+    },
     scrollContent: {
         padding: theme.spacing.lg,
         paddingBottom: 60,
@@ -164,7 +167,7 @@ const styles = StyleSheet.create({
     },
     avatarText: {
         color: '#fff',
-        ...theme.typography.styles.displayMD,
+        ...theme.typography.styles.displayLG,
         fontSize: 48,
     },
     statusBadge: {
@@ -250,7 +253,7 @@ const styles = StyleSheet.create({
         color: theme.colors.primary,
     },
     signOutButton: {
-        backgroundColor: theme.colors.errorContainer,
+        backgroundColor: theme.colors.surfaceContainerHighest,
         paddingVertical: 18,
         borderRadius: theme.roundness.lg,
         alignItems: 'center',
@@ -259,12 +262,12 @@ const styles = StyleSheet.create({
     },
     signOutText: {
         ...theme.typography.styles.titleMD,
-        color: theme.colors.onErrorContainer,
+        color: theme.colors.error,
     },
     versionText: {
         textAlign: 'center',
         marginTop: 60,
-        ...theme.typography.styles.bodyMD,
+        ...theme.typography.styles.bodyLG,
         color: theme.colors.outline,
         opacity: 0.5,
     },
