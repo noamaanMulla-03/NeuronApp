@@ -6,7 +6,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
 
 const ai = genkit({
-  plugins: [vertexAI({ location: 'us-central1' })],
+  plugins: [vertexAI({ location: 'us-central1', projectId: 'neuron-bb594' })],
 });
 
 const firestore = admin.firestore();
@@ -90,6 +90,6 @@ export const semanticChat = onCall<{ query: string }>(async request => {
     };
   } catch (error: any) {
     logger.error('Failed to generate semantic response', error);
-    throw new HttpsError('internal', 'Failed to generate response.', error.message);
+    throw new HttpsError('unknown', error.message || 'Failed to generate response.', { stack: error.stack });
   }
 });

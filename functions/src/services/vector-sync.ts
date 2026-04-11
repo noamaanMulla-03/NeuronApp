@@ -7,7 +7,7 @@ import { genkit } from 'genkit';
 import { vertexAI } from '@genkit-ai/google-genai';
 
 const ai = genkit({
-  plugins: [vertexAI({ location: 'us-central1' })],
+  plugins: [vertexAI({ location: 'us-central1', projectId: 'neuron-bb594' })],
 });
 
 interface EmbedTaskPayload {
