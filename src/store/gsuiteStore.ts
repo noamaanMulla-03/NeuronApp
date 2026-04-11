@@ -94,7 +94,7 @@ export const useGSuiteStore = create<GSuiteState>((set, get) => ({
                 [service]: {
                     status: 'done',
                     lastSync: new Date().toISOString(),
-                    itemCount,
+                    itemCount: state.syncMeta[service].itemCount + itemCount,
                     error: null,
                 },
             },

@@ -1,16 +1,16 @@
 import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
+import { vertexAI } from '@genkit-ai/google-genai';
 import { defineFirestoreRetriever } from '@genkit-ai/firebase';
 import * as admin from 'firebase-admin';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
 
 const ai = genkit({
-  plugins: [googleAI()],
+  plugins: [vertexAI({ location: 'us-central1' })],
 });
 
 const firestore = admin.firestore();
-const embedder = googleAI.embedder('gemini-embedding-001');
+const embedder = vertexAI.embedder('text-embedding-004');
 
 // Generic retriever using the common embeddingText field
 const genericRetriever = defineFirestoreRetriever(ai, {
@@ -80,7 +80,7 @@ export const semanticChat = onCall<{ query: string }>(async request => {
 
   try {
     const response = await ai.generate({
-      model: googleAI.model('gemini-2.5-flash'),
+      model: vertexAI.model('gemini-2.5-flash'),
       prompt,
     });
 

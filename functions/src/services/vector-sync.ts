@@ -4,10 +4,10 @@ import * as admin from 'firebase-admin';
 import { getFunctions } from 'firebase-admin/functions';
 import * as logger from 'firebase-functions/logger';
 import { genkit } from 'genkit';
-import { googleAI } from '@genkit-ai/google-genai';
+import { vertexAI } from '@genkit-ai/google-genai';
 
 const ai = genkit({
-  plugins: [googleAI()],
+  plugins: [vertexAI({ location: 'us-central1' })],
 });
 
 interface EmbedTaskPayload {
@@ -33,7 +33,7 @@ export const processEmbedding = onTaskDispatched<EmbedTaskPayload>(
     try {
       logger.info(`Generating embedding for ${docPath}`);
       const embeddings = await ai.embed({
-        embedder: googleAI.embedder('gemini-embedding-001'),
+        embedder: vertexAI.embedder('text-embedding-004'),
         content: text,
       });
 
