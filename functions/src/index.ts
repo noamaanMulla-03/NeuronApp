@@ -2,17 +2,13 @@ import * as admin from 'firebase-admin';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import * as logger from 'firebase-functions/logger';
-
-// Initialize Firebase Admin
-admin.initializeApp();
-
-// Set global options for all functions
-setGlobalOptions({
-    maxInstances: 10,
-    timeoutSeconds: 300, // 5 minutes for long syncs
-    memory: '512MiB', // Enough memory for processing batches
-});
-
+import {
+    exchangeAuthCode,
+    getAccessTokenForUser,
+    storeTokens,
+    GOOGLE_CLIENT_SECRET,
+} from './lib/oauth';
+import { setupAllWatches } from './services/watch-manager';
 import { syncGmail } from './services/gmail';
 import { syncDrive } from './services/drive';
 import { syncDocs } from './services/docs';
@@ -22,93 +18,143 @@ import { syncTasks } from './services/tasks';
 import { syncKeep } from './services/keep';
 import { syncChat } from './services/chat';
 
-interface SyncRequestData {
-    service: string;
-    accessToken: string;
-}
+// Initialize Firebase Admin
+admin.initializeApp();
 
-/**
- * Callable function to sync a specific Google Workspace service.
- */
-export const syncService = onCall<SyncRequestData>(async request => {
-    logger.info('syncService called', {
-        service: request.data?.service,
-        hasToken: !!request.data?.accessToken,
-        uid: request.auth?.uid,
-    });
-
-    // 1. Verify Authentication
-    if (!request.auth) {
-        logger.error('Unauthorized call to syncService');
-        throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
-    }
-
-    const { service, accessToken } = request.data;
-    const uid = request.auth.uid;
-
-    if (!service || !accessToken) {
-        logger.error('Invalid arguments', { service, hasToken: !!accessToken });
-        throw new HttpsError('invalid-argument', 'The function must be called with "service" and "accessToken".');
-    }
-
-    try {
-        let itemCount = 0;
-
-        switch (service) {
-            case 'gmail':
-                itemCount = await syncGmail(accessToken, uid);
-                break;
-            case 'drive':
-                itemCount = await syncDrive(accessToken, uid);
-                break;
-            case 'docs':
-                itemCount = await syncDocs(accessToken, uid);
-                break;
-            case 'calendar':
-                itemCount = await syncCalendar(accessToken, uid);
-                break;
-            case 'contacts':
-                itemCount = await syncContacts(accessToken, uid);
-                break;
-            case 'tasks':
-                itemCount = await syncTasks(accessToken, uid);
-                break;
-            case 'keep':
-                itemCount = await syncKeep(accessToken, uid);
-                break;
-            case 'chat':
-                itemCount = await syncChat(accessToken, uid);
-                break;
-            default:
-                throw new HttpsError('invalid-argument', `Unsupported service: ${service}`);
-        }
-
-        logger.info(`Sync complete for ${service}`, { itemCount, uid });
-        return { success: true, itemCount };
-    } catch (error: any) {
-        logger.error(`Sync error for ${service}`, {
-            error: error.message,
-            stack: error.stack,
-            uid,
-        });
-
-        if (error.message === 'UNAUTHENTICATED') {
-            throw new HttpsError('unauthenticated', 'Google Access Token is expired or invalid.');
-        }
-
-        // Re-throw HttpsErrors, otherwise wrap as unknown to expose to client
-        // Note: Forced redeploy to ensure new error handling is active.
-        if (error instanceof HttpsError) {
-            throw error;
-        }
-
-        throw new HttpsError(
-            'unknown',
-            error.message || 'An unknown error occurred during sync.',
-            { stack: error.stack }
-        );
-    }
+// Set global options for all functions
+setGlobalOptions({
+    maxInstances: 10,
+    timeoutSeconds: 300,
+    memory: '512MiB',
 });
+
+// ---------------------------------------------------------------------------
+// Service name → sync function mapping (reused by initializeSync)
+// ---------------------------------------------------------------------------
+const SERVICE_NAMES = ['gmail', 'drive', 'calendar', 'contacts', 'tasks', 'docs', 'keep', 'chat'] as const;
+type ServiceName = (typeof SERVICE_NAMES)[number];
+
+const SYNC_FNS: Record<ServiceName, (accessToken: string, uid: string) => Promise<number>> = {
+    gmail: syncGmail,
+    drive: syncDrive,
+    calendar: syncCalendar,
+    contacts: syncContacts,
+    tasks: syncTasks,
+    docs: syncDocs,
+    keep: syncKeep,
+    chat: syncChat,
+};
+
+// ---------------------------------------------------------------------------
+// storeRefreshToken — exchanges a one-time server auth code for a refresh
+// token and persists it. Called once after Google sign-in on the client.
+// ---------------------------------------------------------------------------
+export const storeRefreshToken = onCall<{ authCode: string }>(
+    { secrets: [GOOGLE_CLIENT_SECRET] },
+    async (request) => {
+        if (!request.auth) {
+            throw new HttpsError('unauthenticated', 'Must be authenticated.');
+        }
+
+        const { authCode } = request.data;
+        if (!authCode) {
+            throw new HttpsError('invalid-argument', 'authCode is required.');
+        }
+
+        const uid = request.auth.uid;
+        const email = request.auth.token.email ?? '';
+
+        try {
+            const { refreshToken } = await exchangeAuthCode(authCode);
+            await storeTokens(uid, refreshToken, email);
+            logger.info('Refresh token stored', { uid });
+            return { success: true };
+        } catch (err: any) {
+            logger.error('storeRefreshToken failed', { uid, error: err.message });
+            throw new HttpsError('internal', err.message);
+        }
+    },
+);
+
+// ---------------------------------------------------------------------------
+// initializeSync — server-side initial sync + watch setup. Called after the
+// user grants or changes GSuite permissions. Replaces the old client-driven
+// syncService callable entirely.
+// ---------------------------------------------------------------------------
+export const initializeSync = onCall(
+    { secrets: [GOOGLE_CLIENT_SECRET] },
+    async (request) => {
+        if (!request.auth) {
+            throw new HttpsError('unauthenticated', 'Must be authenticated.');
+        }
+
+        const uid = request.auth.uid;
+        const db = admin.firestore();
+
+        // Read which services the user has enabled
+        const permSnap = await db.doc(`users/${uid}/settings/gsuite_permissions`).get();
+        const perms = permSnap.data() ?? {};
+        const enabled = SERVICE_NAMES.filter(s => perms[s]);
+
+        if (enabled.length === 0) {
+            return { success: true, results: [] };
+        }
+
+        let accessToken: string;
+        try {
+            accessToken = await getAccessTokenForUser(uid);
+        } catch (err: any) {
+            throw new HttpsError('failed-precondition', 'No refresh token stored. Please re-authenticate.');
+        }
+
+        // Run sync for each enabled service sequentially (Drive before Docs)
+        const results: { service: string; itemCount: number; error?: string }[] = [];
+
+        for (const service of enabled) {
+            const updateMeta = async (
+                status: 'syncing' | 'done' | 'error',
+                itemCount?: number,
+                error?: string,
+            ) => {
+                const update: Record<string, any> = {
+                    [`${service}.status`]: status,
+                    [`${service}.error`]: error ?? null,
+                };
+                if (status === 'done' && itemCount !== undefined) {
+                    update[`${service}.lastSync`] = new Date().toISOString();
+                    update[`${service}.itemCount`] = itemCount;
+                }
+                await db.doc(`users/${uid}/sync_meta/status`).set(update, { merge: true });
+            };
+
+            try {
+                await updateMeta('syncing');
+                const itemCount = await SYNC_FNS[service](accessToken, uid);
+                await updateMeta('done', itemCount);
+                results.push({ service, itemCount });
+                logger.info(`initializeSync: ${service} done`, { uid, itemCount });
+            } catch (err: any) {
+                await updateMeta('error', undefined, err.message);
+                results.push({ service, itemCount: 0, error: err.message });
+                logger.error(`initializeSync: ${service} failed`, { uid, error: err.message });
+            }
+        }
+
+        // Set up push notification watches for Gmail/Calendar/Drive
+        try {
+            await setupAllWatches(uid);
+        } catch (err: any) {
+            logger.error('initializeSync: watch setup failed', { uid, error: err.message });
+        }
+
+        return { success: true, results };
+    },
+);
+
+// ---------------------------------------------------------------------------
+// Real-time push handlers, scheduled polling, and watch renewal
+// ---------------------------------------------------------------------------
+export { onGmailPush, onCalendarPush, onDrivePush, autoSyncPolled, renewWatches } from './services/auto-sync';
 
 // AI & Semantic Memory Features
 export * from './services/vector-sync';

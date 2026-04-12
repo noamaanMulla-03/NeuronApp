@@ -4,6 +4,7 @@ import {
     doc,
     setDoc,
     getDoc,
+    onSnapshot,
     collection,
     writeBatch,
     Firestore,
@@ -64,4 +65,19 @@ export async function batchWriteUserDocs(
 
         await batch.commit();
     }
+}
+
+/**
+ * Subscribe to real-time updates on a document under a user's namespace.
+ * Returns an unsubscribe function for cleanup.
+ */
+export function subscribeUserDoc(
+    uid: string,
+    path: string[],
+    onData: (data: DocumentData | null) => void,
+): () => void {
+    const ref = doc(db, 'users', uid, ...path);
+    return onSnapshot(ref, (snap) => {
+        onData(snap.exists() ? snap.data() : null);
+    });
 }

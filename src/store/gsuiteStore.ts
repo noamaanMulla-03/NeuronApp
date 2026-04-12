@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { readUserDoc, writeUserDoc } from '../lib/firestore';
+import { readUserDoc, writeUserDoc, subscribeUserDoc } from '../lib/firestore';
 
 export const SERVICE_NAMES = [
     'gmail',
@@ -29,14 +29,13 @@ interface GSuiteState {
 
     setPermission: (service: ServiceName, enabled: boolean) => void;
     setAllPermissions: (permissions: Record<ServiceName, boolean>) => void;
-    setSyncStatus: (service: ServiceName, status: SyncStatus, error?: string) => void;
-    setSyncItemCount: (service: ServiceName, count: number) => void;
-    markSyncDone: (service: ServiceName, itemCount: number) => void;
 
     loadPermissions: (uid: string) => Promise<void>;
     savePermissions: (uid: string) => Promise<void>;
-    loadSyncMeta: (uid: string) => Promise<void>;
-    saveSyncMeta: (uid: string) => Promise<void>;
+
+    // Real-time sync meta subscription — backend writes sync_meta, frontend
+    // listens via onSnapshot. Returns an unsubscribe function for cleanup.
+    subscribeSyncMeta: (uid: string) => () => void;
 }
 
 const defaultSyncMeta: ServiceSyncMeta = {
@@ -67,39 +66,6 @@ export const useGSuiteStore = create<GSuiteState>((set, get) => ({
 
     setAllPermissions: (permissions) => set({ permissions }),
 
-    setSyncStatus: (service, status, error) =>
-        set(state => ({
-            syncMeta: {
-                ...state.syncMeta,
-                [service]: {
-                    ...state.syncMeta[service],
-                    status,
-                    error: error ?? null,
-                },
-            },
-        })),
-
-    setSyncItemCount: (service, count) =>
-        set(state => ({
-            syncMeta: {
-                ...state.syncMeta,
-                [service]: { ...state.syncMeta[service], itemCount: count },
-            },
-        })),
-
-    markSyncDone: (service, itemCount) =>
-        set(state => ({
-            syncMeta: {
-                ...state.syncMeta,
-                [service]: {
-                    status: 'done',
-                    lastSync: new Date().toISOString(),
-                    itemCount: state.syncMeta[service].itemCount + itemCount,
-                    error: null,
-                },
-            },
-        })),
-
     loadPermissions: async (uid) => {
         const data = await readUserDoc(uid, ['settings', 'gsuite_permissions']);
         if (data) {
@@ -118,21 +84,21 @@ export const useGSuiteStore = create<GSuiteState>((set, get) => ({
         await writeUserDoc(uid, ['settings', 'gsuite_permissions'], { ...permissions });
     },
 
-    loadSyncMeta: async (uid) => {
-        const data = await readUserDoc(uid, ['sync_meta', 'status']);
-        if (data) {
-            const meta = createDefaultSyncMeta();
-            for (const key of SERVICE_NAMES) {
-                if (data[key]) {
-                    meta[key] = { ...defaultSyncMeta, ...data[key] };
+    // Subscribe to real-time sync_meta updates from the backend.
+    // The backend writes to users/{uid}/sync_meta/status after every
+    // sync (push-triggered or polled). This onSnapshot listener ensures
+    // the UI reflects sync progress instantly without polling.
+    subscribeSyncMeta: (uid) => {
+        return subscribeUserDoc(uid, ['sync_meta', 'status'], (data) => {
+            if (data) {
+                const meta = createDefaultSyncMeta();
+                for (const key of SERVICE_NAMES) {
+                    if (data[key]) {
+                        meta[key] = { ...defaultSyncMeta, ...data[key] };
+                    }
                 }
+                set({ syncMeta: meta });
             }
-            set({ syncMeta: meta });
-        }
-    },
-
-    saveSyncMeta: async (uid) => {
-        const { syncMeta } = get();
-        await writeUserDoc(uid, ['sync_meta', 'status'], { ...syncMeta });
+        });
     },
 }));

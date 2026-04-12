@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import {
     View,
     Text,
@@ -17,7 +17,6 @@ import {
     ServiceName,
     SyncStatus,
 } from '../../src/store/gsuiteStore';
-import { runFullSync, syncService } from '../../src/services/sync-engine';
 import { theme } from '../../src/theme';
 
 const SERVICE_LABELS: Record<ServiceName, { label: string; icon: string }> = {
@@ -58,26 +57,19 @@ function formatDate(iso: string | null): string {
 export default function GSuiteStatusScreen() {
     const navigation = useNavigation();
     const { user } = useAuthStore();
-    const { permissions, syncMeta, loadSyncMeta } = useGSuiteStore();
+    const { permissions, syncMeta, subscribeSyncMeta } = useGSuiteStore();
 
     const enabledServices = SERVICE_NAMES.filter(s => permissions[s]);
     const isSyncing = enabledServices.some(s => syncMeta[s].status === 'syncing');
 
+    // Subscribe to real-time sync_meta updates from the backend.
+    // The backend writes to this document after every push-triggered or
+    // scheduled sync, so the UI reflects progress instantly.
     useEffect(() => {
-        if (user?.uid) {
-            loadSyncMeta(user.uid);
-        }
+        if (!user?.uid) return;
+        const unsubscribe = subscribeSyncMeta(user.uid);
+        return unsubscribe;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user?.uid]);
-
-    const handleSyncAll = useCallback(async () => {
-        if (!user?.uid || isSyncing) { return; }
-        await runFullSync(user.uid);
-    }, [user?.uid, isSyncing]);
-
-    const handleSyncOne = useCallback(async (service: ServiceName) => {
-        if (!user?.uid) { return; }
-        await syncService(user.uid, service);
     }, [user?.uid]);
 
     return (
@@ -89,23 +81,22 @@ export default function GSuiteStatusScreen() {
                     </TouchableOpacity>
                     <Text style={styles.title}>Memory{'\n'}Index</Text>
                     <Text style={styles.subtitle}>
-                        {enabledServices.length} neural paths connected. Assistant accuracy increases as more memory is indexed.
+                        {enabledServices.length} neural paths connected. Syncing happens automatically in the background.
                     </Text>
                 </View>
 
-                <Button
-                    title={isSyncing ? 'Indexing...' : 'Refresh All Memory'}
-                    onPress={handleSyncAll}
-                    loading={isSyncing}
-                    disabled={isSyncing || enabledServices.length === 0}
-                    style={styles.syncAllButton}
-                />
+                {/* Live status banner — shows when any service is actively syncing */}
+                {isSyncing && (
+                    <View style={styles.syncingBanner}>
+                        <ActivityIndicator size="small" color={theme.colors.primary} />
+                        <Text style={styles.syncingText}>Indexing memory...</Text>
+                    </View>
+                )}
 
                 <View style={styles.card}>
                     {enabledServices.map((service, index) => {
                         const meta = syncMeta[service];
                         const info = SERVICE_LABELS[service];
-                        const isServiceSyncing = meta.status === 'syncing';
 
                         return (
                             <View
@@ -142,19 +133,12 @@ export default function GSuiteStatusScreen() {
                                         </Text>
                                     )}
                                 </View>
-                                <TouchableOpacity
-                                    onPress={() => handleSyncOne(service)}
-                                    disabled={isServiceSyncing}
-                                    style={styles.retryButton}
-                                >
-                                    {isServiceSyncing ? (
-                                        <ActivityIndicator size="small" color={theme.colors.primary} />
-                                    ) : (
-                                        <Text style={styles.retryText}>
-                                            {meta.status === 'error' ? 'Retry' : 'Sync'}
-                                        </Text>
-                                    )}
-                                </TouchableOpacity>
+                                {/* Status indicator: spinner while syncing, checkmark when done */}
+                                {meta.status === 'syncing' ? (
+                                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                                ) : meta.status === 'done' ? (
+                                    <Text style={styles.checkMark}>✓</Text>
+                                ) : null}
                             </View>
                         );
                     })}
@@ -214,8 +198,20 @@ const styles = StyleSheet.create({
         lineHeight: 24,
         maxWidth: 280,
     },
-    syncAllButton: {
+    syncingBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: theme.colors.surfaceContainerLow,
+        borderRadius: 16,
+        padding: 16,
         marginBottom: 24,
+        gap: 12,
+    },
+    syncingText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: theme.colors.onSurfaceVariant,
+        fontFamily: theme.typography.fonts.body,
     },
     card: {
         backgroundColor: theme.colors.surfaceContainerLowest,
@@ -289,19 +285,10 @@ const styles = StyleSheet.create({
         marginTop: 2,
         fontFamily: theme.typography.fonts.body,
     },
-    retryButton: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 8,
-        backgroundColor: theme.colors.surfaceContainerLow,
-        minWidth: 60,
-        alignItems: 'center',
-    },
-    retryText: {
-        fontSize: 12,
-        color: theme.colors.primary,
+    checkMark: {
+        fontSize: 18,
+        color: '#34C759',
         fontWeight: '700',
-        fontFamily: theme.typography.fonts.body,
     },
     emptyCard: {
         backgroundColor: theme.colors.surfaceContainerLowest,

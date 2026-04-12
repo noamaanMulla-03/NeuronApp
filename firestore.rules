@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // User-scoped data — only the owning user can read/write
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Tokens subcollection — admin SDK only. Clients must NEVER read refresh
+    // tokens. This rule overrides the broader users/{uid} rule above because
+    // Firestore evaluates the most specific match.
+    match /users/{uid}/tokens/{tokenDoc} {
+      allow read, write: if false;
+    }
+
+    // Watch channel reverse-lookup — admin SDK only. Used by push notification
+    // handlers to resolve channelId → uid on the server.
+    match /watch_channels/{channelId} {
+      allow read, write: if false;
+    }
+  }
+}

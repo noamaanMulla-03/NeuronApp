@@ -18,6 +18,7 @@ import {
     SERVICE_NAMES,
     ServiceName,
 } from '../../src/store/gsuiteStore';
+import { triggerInitialSync } from '../../src/services/sync-engine';
 import { theme } from '../../src/theme';
 
 interface ServiceInfo {
@@ -104,7 +105,16 @@ export default function GSuiteConnectScreen() {
             await savePermissions(user.uid);
             const enabledCount = SERVICE_NAMES.filter(s => permissions[s]).length;
             if (enabledCount > 0) {
+                // Navigate immediately — sync progress is tracked in real time
+                // via onSnapshot on the GSuiteStatus screen
                 navigation.navigate('GSuiteStatus' as never);
+                // Trigger server-side sync + push watch setup (fire-and-forget).
+                // The backend reads saved permissions, syncs all enabled services
+                // using the stored refresh token, and sets up push notification
+                // watches for Gmail/Calendar/Drive.
+                triggerInitialSync().catch(e =>
+                    console.warn('Initial sync trigger failed:', e),
+                );
             } else {
                 navigation.goBack();
             }
