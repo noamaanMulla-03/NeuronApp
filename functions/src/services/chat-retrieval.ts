@@ -25,6 +25,9 @@ function getRetriever(): RetrieverAction {
       vectorField: 'embedding',
       embedder,
       distanceMeasure: 'COSINE',
+      // Return distance so we can log it and source-type metadata for rich citations
+      distanceResultField: '_distance',
+      metadataFields: ['title', 'subject', 'from', 'to', 'date', 'body', 'extractedText'],
     });
   }
   return _retriever;
@@ -34,6 +37,40 @@ function getRetriever(): RetrieverAction {
 const MAX_QUERY_LENGTH = 2000;
 // Timeout for the LLM synthesis step (ms)
 const SYNTHESIS_TIMEOUT_MS = 30_000;
+// Cosine distance threshold — documents more distant than this are irrelevant.
+// Cosine distance = 1 - cosine_similarity; 0 = identical, 2 = opposite.
+// 0.65 keeps only meaningfully related results.
+const DISTANCE_THRESHOLD = 0.65;
+
+// Human-readable label for each collection
+const COLLECTION_LABELS: Record<string, string> = {
+  docs_content: 'Document',
+  gmail_messages: 'Email',
+  keep_notes: 'Note',
+  chat_messages: 'Chat Message',
+};
+
+// Derives a short, readable citation from retriever metadata + collection type
+function buildSourceCitation(meta: Record<string, any> | undefined, collection: string): string {
+  const type = COLLECTION_LABELS[collection] || 'Source';
+
+  if (collection === 'gmail_messages') {
+    const subject = meta?.subject || 'No subject';
+    const from = meta?.from || '';
+    // "Email: Weekly standup — from alice@company.com"
+    return `${type}: ${subject}${from ? ` — from ${from}` : ''}`;
+  }
+
+  if (collection === 'docs_content') {
+    return `${type}: ${meta?.title || 'Untitled'}`;
+  }
+
+  if (collection === 'keep_notes') {
+    return `${type}: ${meta?.title || 'Untitled note'}`;
+  }
+
+  return type;
+}
 
 export const semanticChat = onCall<{ query: string }>(async request => {
   // Entire body wrapped in try-catch so NO error escapes as a bare "internal"
@@ -57,6 +94,8 @@ export const semanticChat = onCall<{ query: string }>(async request => {
     logger.info(`Semantic Chat query for user ${uid}`);
 
     // 3. Parallel retrieval across all indexed collections
+    // Each retrieval embeds the query once and searches the collection's vector index.
+    // distanceThreshold filters out irrelevant results at the database level.
     const collections = ['docs_content', 'gmail_messages', 'keep_notes', 'chat_messages'];
     const retriever = getRetriever();
 
@@ -65,22 +104,26 @@ export const semanticChat = onCall<{ query: string }>(async request => {
         retriever,
         query: trimmedQuery,
         options: {
-          limit: 3,
+          limit: 5,
           collection: `users/${uid}/${col}`,
+          distanceThreshold: DISTANCE_THRESHOLD,
         },
-      }).catch(e => {
-        // Individual collection failures are non-fatal — log and continue
-        logger.warn(`Retrieval skipped for ${col}: ${safeMessage(e)}`);
-        return [];
       })
+        // Tag each result with its source collection for citation building
+        .then(results => results.map(d => ({ doc: d, collection: col })))
+        .catch(e => {
+          // Individual collection failures are non-fatal — log and continue
+          logger.warn(`Retrieval skipped for ${col}: ${safeMessage(e)}`);
+          return [] as { doc: any; collection: string }[];
+        })
     );
 
-    const allResults = await Promise.all(retrievalPromises);
+    const allResults = (await Promise.all(retrievalPromises)).flat();
     // Filter out documents with empty text (missing embeddings, empty content, etc.)
-    const docs = allResults.flat().filter(d => d.text && d.text.trim());
+    const relevant = allResults.filter(r => r.doc.text && r.doc.text.trim());
 
     // 4. Early return if no relevant documents found
-    if (docs.length === 0) {
+    if (relevant.length === 0) {
       return {
         answer:
           'I couldn\'t find any relevant data in your synced Workspace services. ' +
@@ -89,16 +132,28 @@ export const semanticChat = onCall<{ query: string }>(async request => {
       };
     }
 
-    // 5. Synthesis — generate an answer from retrieved context with a timeout guard
-    const contextText = docs.map((d, i) => `[Source ${i + 1}]\n${d.text}`).join('\n\n');
+    // 5. Build structured context for the LLM — each source gets a typed header
+    //    so the model understands what kind of data it's looking at.
+    const contextBlocks = relevant.map((r, i) => {
+      const citation = buildSourceCitation(r.doc.metadata, r.collection);
+      return `[Source ${i + 1} — ${citation}]\n${r.doc.text}`;
+    });
 
+    // 6. Synthesis — generate an answer with a timeout guard
     const synthesisPromise = ai.generate({
       model: vertexAI.model('gemini-2.5-flash'),
       prompt:
-        'You are a proactive AI assistant. Use the following context to answer the user\'s question.\n' +
-        `Context:\n${contextText}\n\n` +
-        `Question: ${trimmedQuery}\n\n` +
-        'If you don\'t know the answer based on the context, say you don\'t know but mention what data IS available.',
+        'You are Neuron, a proactive AI assistant that understands the user\'s digital workspace.\n' +
+        'You have access to their synced Google Workspace data (Emails, Documents, Notes, Chat).\n\n' +
+        'INSTRUCTIONS:\n' +
+        '- Answer the user\'s question using ONLY the context provided below.\n' +
+        '- Cite sources by number (e.g. [1], [2]) when referencing specific information.\n' +
+        '- Structure your response clearly: use short paragraphs for readability.\n' +
+        '- If the context doesn\'t contain an answer, say so and describe what data IS available.\n' +
+        '- Be concise — prioritize the most relevant information.\n\n' +
+        `CONTEXT (${relevant.length} sources):\n\n` +
+        contextBlocks.join('\n\n---\n\n') + '\n\n' +
+        `USER QUESTION: ${trimmedQuery}`,
     });
 
     // Race the synthesis against a timeout so the function doesn't hang indefinitely
@@ -108,9 +163,12 @@ export const semanticChat = onCall<{ query: string }>(async request => {
 
     const response = await Promise.race([synthesisPromise, timeoutPromise]);
 
+    // 7. Build readable source citations for the client
+    const sources = relevant.map(r => buildSourceCitation(r.doc.metadata, r.collection));
+
     return {
       answer: response.text,
-      sources: docs.map(d => (d.text || '').substring(0, 100) + '...'),
+      sources,
     };
   } catch (err: unknown) {
     // Re-throw HttpsErrors as-is so the client gets the correct code

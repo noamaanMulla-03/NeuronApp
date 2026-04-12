@@ -56,25 +56,50 @@ async function enqueueEmbeddingTask(docPath: string, text: string) {
 
 function extractTextForEmbedding(data: any): string | null {
   if (!data) return null;
-  const parts = [];
+  const parts: string[] = [];
 
-  // Gmail
-  if (data.subject) parts.push(`Subject: ${data.subject}`);
-  if (data.from) parts.push(`From: ${data.from}`);
-  if (data.snippet) parts.push(`Snippet: ${data.snippet}`);
-  if (data.body) parts.push(`Body: ${data.body}`);
+  // Gmail — include sender, date, and full body for rich semantic context
+  if (data.subject) {
+    parts.push(`[Email]`);
+    parts.push(`Subject: ${data.subject}`);
+    if (data.from) parts.push(`From: ${data.from}`);
+    if (data.to) parts.push(`To: ${data.to}`);
+    if (data.date) parts.push(`Date: ${data.date}`);
+    if (data.body) parts.push(data.body);
+    else if (data.snippet) parts.push(data.snippet);
+  }
 
-  // Docs
-  if (data.title) parts.push(`Title: ${data.title}`);
-  if (data.extractedText) parts.push(`Content: ${data.extractedText}`);
+  // Docs — include title, extracted text, AND unresolved comments
+  else if (data.extractedText) {
+    parts.push(`[Document]`);
+    if (data.title) parts.push(`Title: ${data.title}`);
+    parts.push(data.extractedText);
+    // Unresolved comments carry actionable context the LLM should know about
+    if (Array.isArray(data.comments)) {
+      const commentText = data.comments
+        .map((c: any) => `${c.author}: ${c.content}`)
+        .join('\n');
+      if (commentText) parts.push(`Comments:\n${commentText}`);
+    }
+  }
 
-  // Keep / Chat / General
-  if (data.textContent) parts.push(data.textContent);
-  if (data.text) parts.push(data.text);
-  if (data.notes) parts.push(data.notes);
+  // Keep — body is a string field written by keep.ts
+  else if (data.title || data.body) {
+    parts.push(`[Note]`);
+    if (data.title) parts.push(`Title: ${data.title}`);
+    if (data.body) parts.push(data.body);
+  }
+
+  // Chat / General fallback
+  else {
+    if (data.textContent) parts.push(data.textContent);
+    if (data.text) parts.push(data.text);
+    if (data.notes) parts.push(data.notes);
+  }
 
   if (parts.length === 0) return null;
   const combined = parts.join('\n\n');
+  // Cap at 8000 characters — the embedding model's practical context window
   return combined.length > 8000 ? combined.slice(0, 8000) : combined;
 }
 
