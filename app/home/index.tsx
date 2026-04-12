@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/store/authStore';
 import { theme } from '../../src/theme';
 import { useNavigation } from '@react-navigation/native';
+import DailyBriefingCard from './daily-briefing';
 
 export default function HomeScreen() {
     const { user } = useAuthStore();
@@ -24,7 +25,7 @@ export default function HomeScreen() {
             {/* TopAppBar: Displays user avatar, app logo, and search icon. */}
             <View style={styles.appBar}>
                 <View style={styles.appBarLeft}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.avatarContainer}
                         onPress={() => navigation.navigate('Profile' as never)}
                     >
@@ -46,7 +47,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView 
+            <ScrollView
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
@@ -56,15 +57,12 @@ export default function HomeScreen() {
                     <Text style={styles.heroSubtitle}>Your cognitive environment is optimized for deep focus today.</Text>
                 </View>
 
-                {/* 
-                  Note: The static 'Proactive Daily Briefing', 'Agenda Balancing', and 'Recent Insights'
-                  components have been removed to eliminate dummy placeholders. 
-                  Future implementation will dynamically render these sections based on synced data.
-                */}
+                {/* Daily Briefing Card: Fetches today's AI-generated brief from Firestore. */}
+                <DailyBriefingCard />
 
                 {/* Chat Input Placeholder: Entry point for proactive AI interaction. */}
                 <View style={styles.chatAnchor}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={styles.chatInput}
                         onPress={() => navigation.navigate('SemanticChat' as never)}
                     >

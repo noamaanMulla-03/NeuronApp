@@ -12,6 +12,7 @@ import {
     authenticateWithBiometric,
 } from './src/lib/biometric';
 
+import { writeUserDoc } from './src/lib/firestore';
 import LoginScreen from './app/auth/login';
 import HomeScreen from './app/home/index';
 import ProfileScreen from './app/home/profile';
@@ -71,6 +72,12 @@ function AppNavigator() {
             setUser(firebaseUser);
 
             if (firebaseUser) {
+                // Persist the device timezone so backend briefing generation can use it.
+                // Fire-and-forget — non-critical, silent on failure.
+                writeUserDoc(firebaseUser.uid, ['settings', 'timezone'], {
+                    tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                }).catch(e => console.warn('Timezone write failed:', e));
+
                 const enabled = await isBiometricEnabled();
                 setBiometricEnabled(enabled);
 
