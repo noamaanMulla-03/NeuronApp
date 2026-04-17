@@ -64,6 +64,34 @@
           }
         }
       ]
+    },
+    {
+      "collectionGroup": "gmail_messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "labelIds",
+          "arrayConfig": "CONTAINS"
+        },
+        {
+          "fieldPath": "internalDate",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "gmail_messages",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isImportant",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "internalDate",
+          "order": "DESCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": []

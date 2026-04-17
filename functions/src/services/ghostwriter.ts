@@ -129,12 +129,10 @@ async function getOrExtractStyle(uid: string): Promise<StyleProfile> {
     try {
         return await extractStyleProfile(uid);
     } catch (err: any) {
-        // Fall back to defaults when user has too few sent emails
-        if (err?.code === 'failed-precondition') {
-            logger.info('Using default style — insufficient sent emails', { uid });
-            return DEFAULT_STYLE;
-        }
-        throw err;
+        // Fall back to defaults — style extraction is non-critical and can fail
+        // for many reasons: too few sent emails, missing Firestore index, AI error
+        logger.warn('Style extraction failed, using defaults', { uid, error: err.message });
+        return DEFAULT_STYLE;
     }
 }
 
