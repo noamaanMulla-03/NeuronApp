@@ -214,18 +214,18 @@ export default function SemanticChatScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.appBar}>
-                <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-                    <Text style={styles.backText}>← Back</Text>
-                </TouchableOpacity>
-                <Text style={styles.title}>Semantic Memory</Text>
-                <View style={{ width: 60 }} />
-            </View>
-
             <KeyboardAvoidingView
                 style={styles.keyboardAvoid}
-                behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             >
+                <View style={styles.appBar}>
+                    <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+                        <Text style={styles.backText}>← Back</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.title}>Semantic Memory</Text>
+                    <View style={{ width: 60 }} />
+                </View>
+
                 <ScrollView contentContainerStyle={styles.chatScroll} showsVerticalScrollIndicator={false}>
                     {messages.length === 0 ? (
                         <View style={styles.emptyState}>
