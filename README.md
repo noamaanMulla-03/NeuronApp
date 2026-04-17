@@ -11,8 +11,8 @@ Built around the **Cognitive Sanctuary** design system: tonally layered UI with 
 ### Real-Time Google Workspace Sync
 
 Eight Google services are synced automatically in the background without any user interaction after initial permission grant. Sync uses a hybrid push + polling architecture:
-
-**Push-based (real-time):**
+ 
+**Push-based (real-time):** 
 
 - **Gmail** — Google pushes change notifications via Cloud Pub/Sub (`gmail-push` topic). Each notification triggers an incremental sync of new/modified messages. Extracts subject, sender, date, body, labels, importance markers, and category.
 - **Google Drive** — HTTP webhook channel on the Drive Changes endpoint. On every file change, Drive metadata is synced and document content extraction is triggered automatically.

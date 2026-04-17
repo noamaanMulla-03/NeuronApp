@@ -5,11 +5,20 @@ import { theme } from '../../src/theme';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../src/store/authStore';
 
+// A single step in the agent's Thought → Action → Observation chain
+interface ReActStep {
+    type: 'thought' | 'action' | 'observation' | 'finalAnswer';
+    text: string;
+    tool?: string;
+    toolInput?: Record<string, any>;
+}
+
 interface ChatMessage {
     id: string;
     role: 'user' | 'ai';
     text: string;
     sources?: string[];
+    steps?: ReActStep[]; // ReAct reasoning trace (AI messages only)
 }
 
 // Cloud Function URL — matches the sync engine's raw-fetch approach to avoid
@@ -35,6 +44,89 @@ function getUserErrorMessage(status?: number, serverMessage?: string): string {
         return `Something went wrong: ${serverMessage}`;
     }
     return 'Something went wrong while processing your request. Please try again.';
+}
+
+// Icon/label per reasoning step type — keeps the trace scannable
+const STEP_ICONS: Record<ReActStep['type'], string> = {
+    thought: '💭',
+    action: '🔧',
+    observation: '📋',
+    finalAnswer: '✅',
+};
+
+/**
+ * Parses a plain string containing **bold** and *italic* markdown into
+ * an array of React Native <Text> elements with appropriate styles.
+ * Handles nested bold-inside-italic and vice-versa.
+ */
+function FormattedText({ text, baseStyle }: { text: string; baseStyle: any }) {
+    // Split on **bold** first, then *italic* within each segment
+    const parts: React.ReactNode[] = [];
+    // Regex: capture **bold** and *italic* spans, preserving order
+    const regex = /(\*\*(.+?)\*\*|\*(.+?)\*)/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+
+    while ((match = regex.exec(text)) !== null) {
+        // Plain text before this match
+        if (match.index > lastIndex) {
+            parts.push(text.slice(lastIndex, match.index));
+        }
+        if (match[2]) {
+            // **bold** match (group 2)
+            parts.push(
+                <Text key={match.index} style={{ fontWeight: 'bold' }}>{match[2]}</Text>
+            );
+        } else if (match[3]) {
+            // *italic* match (group 3)
+            parts.push(
+                <Text key={match.index} style={{ fontStyle: 'italic' }}>{match[3]}</Text>
+            );
+        }
+        lastIndex = match.index + match[0].length;
+    }
+
+    // Remaining plain text after last match
+    if (lastIndex < text.length) {
+        parts.push(text.slice(lastIndex));
+    }
+
+    return <Text style={baseStyle}>{parts}</Text>;
+}
+
+/** Collapsible reasoning trace rendered above the final answer in AI bubbles. */
+function ReasoningTrace({ steps }: { steps: ReActStep[] }) {
+    const [expanded, setExpanded] = useState(false);
+
+    // Only show non-finalAnswer steps in the trace (final answer is the message text)
+    const traceSteps = steps.filter(s => s.type !== 'finalAnswer');
+    if (traceSteps.length === 0) return null;
+
+    return (
+        <View style={styles.traceContainer}>
+            <TouchableOpacity
+                style={styles.traceToggle}
+                onPress={() => setExpanded(prev => !prev)}
+                activeOpacity={0.7}
+            >
+                <Text style={styles.traceToggleText}>
+                    {expanded ? '▾' : '▸'} Reasoning ({traceSteps.length} steps)
+                </Text>
+            </TouchableOpacity>
+
+            {expanded && traceSteps.map((step, i) => (
+                <View key={i} style={styles.traceStep}>
+                    <Text style={styles.traceStepHeader}>
+                        {STEP_ICONS[step.type]} {step.type.toUpperCase()}
+                        {step.tool ? ` — ${step.tool}` : ''}
+                    </Text>
+                    <Text style={styles.traceStepText} numberOfLines={step.type === 'observation' ? 4 : undefined}>
+                        {step.text}
+                    </Text>
+                </View>
+            ))}
+        </View>
+    );
 }
 
 export default function SemanticChatScreen() {
@@ -104,6 +196,7 @@ export default function SemanticChatScreen() {
                 role: 'ai',
                 text: result.answer,
                 sources: result.sources,
+                steps: result.steps, // ReAct reasoning trace from the agent
             };
 
             setMessages((prev) => [...prev, aiMsg]);
@@ -147,12 +240,20 @@ export default function SemanticChatScreen() {
                                 styles.messageBubble,
                                 msg.role === 'user' ? styles.messageUser : styles.messageAi
                             ]}>
-                                <Text style={[
-                                    styles.messageText,
-                                    msg.role === 'user' ? styles.messageTextUser : styles.messageTextAi
-                                ]}>
-                                    {msg.text}
-                                </Text>
+                                {/* ReAct reasoning trace — collapsible section for AI messages */}
+                                {msg.role === 'ai' && msg.steps && msg.steps.length > 1 && (
+                                    <ReasoningTrace steps={msg.steps} />
+                                )}
+                                {msg.role === 'user' ? (
+                                    <Text style={[styles.messageText, styles.messageTextUser]}>
+                                        {msg.text}
+                                    </Text>
+                                ) : (
+                                    <FormattedText
+                                        text={msg.text}
+                                        baseStyle={[styles.messageText, styles.messageTextAi]}
+                                    />
+                                )}
                                 {msg.role === 'ai' && msg.sources && msg.sources.length > 0 && (
                                     <View style={styles.sourceContainer}>
                                         <Text style={styles.sourceTitle}>Sources:</Text>
@@ -345,5 +446,37 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 24,
         fontWeight: 'bold',
+    },
+    // Reasoning trace styles
+    traceContainer: {
+        marginBottom: 12,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.colors.outlineVariant + '33',
+    },
+    traceToggle: {
+        paddingVertical: 4,
+    },
+    traceToggleText: {
+        ...theme.typography.styles.labelMD,
+        color: theme.colors.onSurfaceVariant,
+    },
+    traceStep: {
+        marginTop: 8,
+        paddingLeft: 8,
+        borderLeftWidth: 2,
+        borderLeftColor: theme.colors.outlineVariant + '55',
+    },
+    traceStepHeader: {
+        fontSize: 11,
+        fontWeight: '600' as const,
+        color: theme.colors.primary,
+        marginBottom: 2,
+    },
+    traceStepText: {
+        fontSize: 12,
+        color: theme.colors.onSurfaceVariant,
+        fontStyle: 'italic' as const,
+        lineHeight: 18,
     },
 });
