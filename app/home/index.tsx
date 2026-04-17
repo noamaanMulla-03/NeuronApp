@@ -88,9 +88,9 @@ export default function HomeScreen() {
                     <Text style={styles.navIcon}>📊</Text>
                     <Text style={styles.navText}>Data</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.navItem}>
-                    <Text style={styles.navIcon}>✨</Text>
-                    <Text style={styles.navText}>Insights</Text>
+                <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Ghostwriter' as never)}>
+                    <Text style={styles.navIcon}>✍️</Text>
+                    <Text style={styles.navText}>Drafts</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate('Profile' as never)}>
                     <Text style={styles.navIcon}>👤</Text>

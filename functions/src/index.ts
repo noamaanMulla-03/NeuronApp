@@ -162,3 +162,4 @@ export * from './services/chat-retrieval';
 export * from './services/daily-briefing';
 export { summarizeConversations } from './services/episodic-memory';
 export { resolveConflict } from './services/conflict-resolver';
+export { extractStyle, generateSmartReplies, generateDraft, sendDraft, refreshStyleProfiles } from './services/ghostwriter';
