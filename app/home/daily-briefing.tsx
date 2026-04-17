@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { getDocs, query, where, collection, doc, updateDoc } from 'firebase/firestore';
 import { useAuthStore } from '../../src/store/authStore';
-import { readUserDoc } from '../../src/lib/firestore';
+import { readUserDoc, db } from '../../src/lib/firestore';
 import { theme } from '../../src/theme';
 
 // ---------------------------------------------------------------------------
@@ -16,6 +17,16 @@ interface DailyBrief {
     importantEmails: string[];
     generatedAt: string;
     contextStats: { events: number; tasks: number; emails: number };
+}
+
+// Conflict detected by the backend after calendar sync
+interface ConflictResolution {
+    id: string;
+    highPriorityEvent: { id: string; summary: string; start: string; end: string };
+    lowPriorityEvent: { id: string; summary: string; start: string; end: string };
+    reason: string;
+    suggestedAction: string;
+    status: 'pending' | 'acknowledged' | 'dismissed';
 }
 
 /** Returns today's date as YYYY-MM-DD in the device's local timezone — matches the key written by the backend */
@@ -34,18 +45,39 @@ export default function DailyBriefingCard() {
     const { user } = useAuthStore();
     const [brief, setBrief] = useState<DailyBrief | null>(null);
     const [loading, setLoading] = useState(true);
+    const [conflicts, setConflicts] = useState<ConflictResolution[]>([]);
 
     useEffect(() => {
         if (!user?.uid) { setLoading(false); return; }
 
         const dateStr = localDateStr();
 
-        // Read today's brief document from the user's daily_briefings subcollection
-        readUserDoc(user.uid, ['daily_briefings', dateStr])
-            .then(data => setBrief(data as DailyBrief | null))
-            .catch(() => setBrief(null)) // Brief is non-critical — fail silently
-            .finally(() => setLoading(false));
+        // Fetch brief + pending conflicts in parallel
+        Promise.all([
+            readUserDoc(user.uid, ['daily_briefings', dateStr])
+                .then(data => setBrief(data as DailyBrief | null))
+                .catch(() => setBrief(null)),
+            getDocs(query(
+                collection(db, 'users', user.uid, 'conflict_resolutions'),
+                where('status', '==', 'pending'),
+            ))
+                .then(snap => setConflicts(snap.docs.map(d => ({ id: d.id, ...d.data() } as ConflictResolution))))
+                .catch(() => setConflicts([])),
+        ]).finally(() => setLoading(false));
     }, [user?.uid]);
+
+    // Resolve a conflict by updating its status directly in Firestore
+    const handleResolve = async (conflictId: string, action: 'acknowledged' | 'dismissed') => {
+        if (!user?.uid) return;
+        try {
+            await updateDoc(doc(db, 'users', user.uid, 'conflict_resolutions', conflictId), {
+                status: action,
+                resolvedAt: new Date().toISOString(),
+            });
+            // Remove from local state immediately
+            setConflicts(prev => prev.filter(c => c.id !== conflictId));
+        } catch { /* Non-critical — silent fail */ }
+    };
 
     // ---- Loading state: inline spinner matching the card footprint ----
     if (loading) {
@@ -106,6 +138,35 @@ export default function DailyBriefingCard() {
                     <Text style={styles.subsectionLabel}>📧  Inbox</Text>
                     {brief.importantEmails.map((item, i) => (
                         <Text key={i} style={styles.bullet}>• {item}</Text>
+                    ))}
+                </View>
+            )}
+
+            {/* Schedule conflicts detected by the conflict resolver */}
+            {conflicts.length > 0 && (
+                <View style={styles.section}>
+                    <Text style={styles.subsectionLabel}>⚠️  Conflicts</Text>
+                    {conflicts.map(c => (
+                        <View key={c.id} style={styles.conflictItem}>
+                            <Text style={styles.conflictText}>
+                                {c.highPriorityEvent.summary} overlaps with {c.lowPriorityEvent.summary}
+                            </Text>
+                            <Text style={styles.conflictReason}>{c.suggestedAction}</Text>
+                            <View style={styles.conflictActions}>
+                                <TouchableOpacity
+                                    style={styles.conflictBtn}
+                                    onPress={() => handleResolve(c.id, 'acknowledged')}
+                                >
+                                    <Text style={styles.conflictBtnText}>Acknowledge</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={styles.conflictBtnDismiss}
+                                    onPress={() => handleResolve(c.id, 'dismissed')}
+                                >
+                                    <Text style={styles.conflictBtnDismissText}>Dismiss</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
                     ))}
                 </View>
             )}
@@ -181,5 +242,49 @@ const styles = StyleSheet.create({
         ...theme.typography.styles.bodyLG,
         color: theme.colors.onSurfaceVariant,
         opacity: 0.6,
+    },
+    conflictItem: {
+        backgroundColor: theme.colors.surfaceContainerLow,
+        borderRadius: theme.roundness.md,
+        padding: theme.spacing.sm,
+        marginTop: theme.spacing.xs,
+    },
+    conflictText: {
+        ...theme.typography.styles.bodyLG,
+        color: theme.colors.onSurface,
+        fontWeight: '600',
+    },
+    conflictReason: {
+        ...theme.typography.styles.bodyLG,
+        color: theme.colors.onSurfaceVariant,
+        fontSize: 13,
+        marginTop: 2,
+    },
+    conflictActions: {
+        flexDirection: 'row',
+        gap: theme.spacing.sm,
+        marginTop: theme.spacing.sm,
+    },
+    conflictBtn: {
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 16,
+        backgroundColor: theme.colors.primary,
+    },
+    conflictBtnText: {
+        color: '#fff',
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    conflictBtnDismiss: {
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 16,
+        backgroundColor: theme.colors.surfaceContainerHigh,
+    },
+    conflictBtnDismissText: {
+        color: theme.colors.onSurfaceVariant,
+        fontSize: 12,
+        fontWeight: '600',
     },
 });

@@ -160,3 +160,5 @@ export { onGmailPush, onCalendarPush, onDrivePush, autoSyncPolled, renewWatches 
 export * from './services/vector-sync';
 export * from './services/chat-retrieval';
 export * from './services/daily-briefing';
+export { summarizeConversations } from './services/episodic-memory';
+export { resolveConflict } from './services/conflict-resolver';

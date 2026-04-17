@@ -136,6 +136,10 @@ export default function SemanticChatScreen() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(false);
 
+    // Unique conversation ID per chat session — enables episodic memory persistence
+    const [conversationId] = useState(() =>
+        Date.now().toString(36) + Math.random().toString(36).slice(2));
+
     const handleSend = async () => {
         if (!query.trim()) return;
 
@@ -172,7 +176,7 @@ export default function SemanticChatScreen() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${idToken}`,
                 },
-                body: JSON.stringify({ data: { query: userMsg.text } }),
+                body: JSON.stringify({ data: { query: userMsg.text, conversationId } }),
             });
 
             if (!response.ok) {

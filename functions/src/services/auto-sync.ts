@@ -13,6 +13,7 @@ import { syncContacts } from './contacts';
 import { syncTasks } from './tasks';
 import { syncKeep } from './keep';
 import { syncChat } from './chat';
+import { detectAndStoreConflicts } from './conflict-resolver';
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -206,6 +207,10 @@ export const onCalendarPush = onRequest(
         res.status(200).send('OK');
 
         await executeSyncForUser(uid, 'calendar', syncCalendar);
+
+        // Detect schedule conflicts after syncing new calendar data
+        try { await detectAndStoreConflicts(uid); }
+        catch (err: any) { logger.warn('Conflict detection failed', { uid, error: err.message }); }
     },
 );
 
