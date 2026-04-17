@@ -58,13 +58,13 @@ async function callFunction<T>(url: string, data: any): Promise<T> {
 
     if (!response.ok) {
         const text = await response.text();
-        let msg = 'Request failed';
+        let msg = `Request failed (${response.status})`;
         try { msg = JSON.parse(text)?.error?.message || msg; } catch {}
         throw new Error(msg);
     }
 
-    const json = await response.json();
-    return json.result as T;
+    const json = (await response.json()) as { result: T };
+    return json.result;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,6 +88,7 @@ export default function GhostwriterScreen() {
     const [selectedEmail, setSelectedEmail] = useState<EmailPreview | null>(null);
     const [replies, setReplies] = useState<SmartReply[]>([]);
     const [loadingReplies, setLoadingReplies] = useState(false);
+    const [replyError, setReplyError] = useState('');
 
     // Compose / draft state
     const [instruction, setInstruction] = useState('');
@@ -127,12 +128,13 @@ export default function GhostwriterScreen() {
         setMode('smartReply');
         setLoadingReplies(true);
         setReplies([]);
+        setReplyError('');
         try {
             const result = await callFunction<{ replies: SmartReply[] }>(
                 SMART_REPLIES_URL, { messageId: email.id });
             setReplies(result.replies);
         } catch (err: any) {
-            setReplies([{ label: 'Error', body: err.message || 'Failed to generate replies.' }]);
+            setReplyError(err.message || 'Failed to generate replies.');
         } finally {
             setLoadingReplies(false);
         }
@@ -140,6 +142,9 @@ export default function GhostwriterScreen() {
 
     // Select a smart reply → move to preview for editing
     const handlePickReply = useCallback((reply: SmartReply) => {
+        // Pre-populate recipient from the original email's From address
+        const extracted = selectedEmail?.from?.match(/<(.+?)>/)?.[1] || selectedEmail?.from || '';
+        if (extracted) setRecipientHint(extracted);
         setDraft({
             subject: `Re: ${selectedEmail?.subject || ''}`,
             body: reply.body,
@@ -160,8 +165,8 @@ export default function GhostwriterScreen() {
             setDraft(result.draft);
             setMode('preview');
         } catch (err: any) {
-            setDraft({ subject: 'Error', body: err.message || 'Draft generation failed.' });
-            setMode('preview');
+            // Stay in compose mode — don't push errors into preview as a saveable draft
+            setSavedMessage(err.message || 'Draft generation failed.');
         } finally {
             setLoadingDraft(false);
         }
@@ -205,6 +210,7 @@ export default function GhostwriterScreen() {
         setMode('inbox');
         setSelectedEmail(null);
         setReplies([]);
+        setReplyError('');
         setDraft(null);
         setInstruction('');
         setRecipientHint('');
@@ -301,6 +307,11 @@ export default function GhostwriterScreen() {
                                 <ActivityIndicator size="small" color={theme.colors.primary} />
                                 <Text style={styles.loadingText}>Generating smart replies...</Text>
                             </View>
+                        ) : replyError ? (
+                            /* Non-tappable error — not inserted into replies array */
+                            <View style={styles.centered}>
+                                <Text style={styles.emptyText}>{replyError}</Text>
+                            </View>
                         ) : (
                             <>
                                 <Text style={styles.sectionLabel}>💡  SUGGESTED REPLIES</Text>
@@ -376,6 +387,11 @@ export default function GhostwriterScreen() {
                                 <Text style={styles.primaryButtonText}>Generate Draft</Text>
                             )}
                         </TouchableOpacity>
+
+                        {/* Error message from failed draft generation */}
+                        {savedMessage !== '' && (
+                            <Text style={styles.savedMessage}>{savedMessage}</Text>
+                        )}
                     </ScrollView>
                 )}
 
@@ -390,12 +406,12 @@ export default function GhostwriterScreen() {
                             <Text style={styles.draftBody} selectable>{draft.body}</Text>
                         </View>
 
-                        {/* Recipient for saving to Gmail */}
+                        {/* Recipient for saving to Gmail — pre-populated via handlePickReply */}
                         <TextInput
                             style={styles.textInput}
                             placeholder="Recipient email (to save as Gmail draft)"
                             placeholderTextColor={theme.colors.onSurfaceVariant}
-                            value={recipientHint || selectedEmail?.from?.match(/<(.+?)>/)?.[1] || ''}
+                            value={recipientHint}
                             onChangeText={setRecipientHint}
                             keyboardType="email-address"
                             autoCapitalize="none"

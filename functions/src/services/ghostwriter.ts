@@ -102,7 +102,17 @@ async function extractStyleProfile(uid: string): Promise<StyleProfile> {
     return profile;
 }
 
-/** Get cached style profile or extract fresh one */
+// Neutral fallback for users with insufficient sent emails
+const DEFAULT_STYLE: StyleProfile = {
+    tone: 'professional and friendly',
+    greetingStyle: 'Hi [Name],',
+    signOff: 'Best regards',
+    formattingQuirks: [],
+    averageLength: 'medium',
+    vocabularyNotes: 'standard business English',
+};
+
+/** Get cached style profile, extract fresh one, or fall back to defaults */
 async function getOrExtractStyle(uid: string): Promise<StyleProfile> {
     const db = admin.firestore();
     const doc = await db.doc(`users/${uid}/settings/style_profile`).get();
@@ -116,7 +126,16 @@ async function getOrExtractStyle(uid: string): Promise<StyleProfile> {
         }
     }
 
-    return extractStyleProfile(uid);
+    try {
+        return await extractStyleProfile(uid);
+    } catch (err: any) {
+        // Fall back to defaults when user has too few sent emails
+        if (err?.code === 'failed-precondition') {
+            logger.info('Using default style — insufficient sent emails', { uid });
+            return DEFAULT_STYLE;
+        }
+        throw err;
+    }
 }
 
 /** Format a style profile as prompt context */
@@ -254,13 +273,29 @@ export const sendDraft = onCall<{
             throw new HttpsError('invalid-argument', 'to, subject, and body are required.');
         }
 
+        // Validate email format and reject header-injection attempts
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(to)) {
+            throw new HttpsError('invalid-argument', 'Invalid recipient email address.');
+        }
+
+        // Strip \r\n from header fields to prevent RFC 2822 header injection
+        const safeTo = to.replace(/[\r\n]/g, '');
+        const safeSubject = subject.replace(/[\r\n]/g, '');
+
         const uid = request.auth.uid;
         const accessToken = await getAccessTokenForUser(uid);
 
+        // Read sender email from stored token doc for the From header
+        const db = admin.firestore();
+        const tokenDoc = await db.doc(`users/${uid}/tokens/google`).get();
+        const senderEmail = tokenDoc.data()?.email || '';
+
         // Construct RFC 2822 formatted message
         const rawParts = [
-            `To: ${to}`,
-            `Subject: ${subject}`,
+            ...(senderEmail ? [`From: ${senderEmail}`] : []),
+            `To: ${safeTo}`,
+            `Subject: ${safeSubject}`,
             'Content-Type: text/plain; charset=UTF-8',
             '',
             body,
